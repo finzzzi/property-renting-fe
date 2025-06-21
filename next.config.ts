@@ -10,6 +10,20 @@ const nextConfig: NextConfig = {
         port: "",
         pathname: "/**",
       },
+      // Google profile images
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+        port: "",
+        pathname: "/**",
+      },
+      // Facebook profile images
+      {
+        protocol: "https",
+        hostname: "scontent-sin2-2.xx.fbcdn.net",
+        port: "",
+        pathname: "/**",
+      },
     ],
   },
 };

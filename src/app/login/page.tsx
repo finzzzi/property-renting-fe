@@ -1,28 +1,38 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Image from "next/image";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 
 export default function Login() {
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
+  const { signInWithGoogle, signInWithFacebook, user } = useAuth();
+  const router = useRouter();
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+  if (user) {
+    router.push("/");
+    return null;
+  }
+
+  const handleGoogleSignIn = async () => {
+    try {
+      localStorage.setItem("selectedRole", "traveler");
+      await signInWithGoogle();
+    } catch (error) {
+      console.error("Error signing in with Google:", error);
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Login form submitted:", formData);
+  const handleFacebookSignIn = async () => {
+    try {
+      localStorage.setItem("selectedRole", "traveler");
+      await signInWithFacebook();
+    } catch (error) {
+      console.error("Error signing in with Facebook:", error);
+    }
   };
 
   return (
@@ -38,7 +48,7 @@ export default function Login() {
 
           <Card className="w-full border-0 shadow-none">
             <CardContent className="pt-6">
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input
@@ -46,8 +56,6 @@ export default function Login() {
                     name="email"
                     type="email"
                     placeholder="contoh@gmail.com"
-                    value={formData.email}
-                    onChange={handleInputChange}
                     required
                   />
                 </div>
@@ -67,8 +75,6 @@ export default function Login() {
                     name="password"
                     type="password"
                     placeholder="••••••••"
-                    value={formData.password}
-                    onChange={handleInputChange}
                     required
                   />
                 </div>
@@ -96,8 +102,8 @@ export default function Login() {
                 <div className="mt-6 grid grid-cols-2 gap-3">
                   <Button
                     variant="outline"
-                    className="w-full"
-                    onClick={() => console.log("Google login")}
+                    className="w-full h-12"
+                    onClick={handleGoogleSignIn}
                   >
                     <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                       <path
@@ -122,8 +128,8 @@ export default function Login() {
 
                   <Button
                     variant="outline"
-                    className="w-full"
-                    onClick={() => console.log("Facebook login")}
+                    className="w-full h-12"
+                    onClick={handleFacebookSignIn}
                   >
                     <svg
                       className="w-5 h-5 mr-2"
@@ -157,11 +163,11 @@ export default function Login() {
       <div className="hidden lg:block lg:flex-1 relative">
         <Image
           className="absolute inset-0 h-full w-full object-cover"
-          src="https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?q=80&w=1049&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+          src="https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
           alt="Beautiful hotel lobby"
           fill
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
       </div>
     </div>
   );
