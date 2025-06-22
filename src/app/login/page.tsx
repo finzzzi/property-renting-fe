@@ -12,11 +12,17 @@ import { Formik, Form, Field, ErrorMessage } from "formik";
 import { loginSchema, LoginFormValues } from "@/lib/validationSchemas";
 
 export default function Login() {
-  const { signInWithGoogle, signInWithFacebook, user, signInWithPassword } =
-    useAuth();
+  const {
+    signInWithGoogle,
+    signInWithFacebook,
+    user,
+    signInWithPassword,
+    checkEmailExists,
+  } = useAuth();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
+  const [emailNotRegistered, setEmailNotRegistered] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -32,12 +38,27 @@ export default function Login() {
   const handleLogin = async (values: LoginFormValues) => {
     setIsLoading(true);
     setLoginError("");
+    setEmailNotRegistered(false);
 
     try {
-      await signInWithPassword(values.email, values.password);
+      const emailExists = await checkEmailExists(values.email);
+
+      if (!emailExists) {
+        setLoginError("Email belum terdaftar");
+        setEmailNotRegistered(true);
+        return;
+      }
+
+      try {
+        await signInWithPassword(values.email, values.password);
+      } catch (passwordError) {
+        console.error("Password error:", passwordError);
+        setLoginError("Password yang Anda masukkan salah");
+        return;
+      }
     } catch (error) {
-      console.error("Error signing in:", error);
-      setLoginError("Email atau password tidak valid");
+      console.error("Error during login:", error);
+      setLoginError("Terjadi kesalahan saat login");
     } finally {
       setIsLoading(false);
     }

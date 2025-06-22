@@ -16,7 +16,8 @@ export const loginSchema = Yup.object({
   email: Yup.string()
     .email("Format email tidak valid")
     .required("Email wajib diisi")
-    .lowercase(),
+    .lowercase()
+    .trim(),
   password: Yup.string()
     .min(6, "Password minimal 6 karakter")
     .required("Password wajib diisi"),
