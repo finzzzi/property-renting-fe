@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,8 +26,7 @@ export default function PasswordSetupModal({
   const [error, setError] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
   const [isContinueLoading, setIsContinueLoading] = useState(false);
-  const [countdown, setCountdown] = useState(5);
-  const { updatePassword, refreshUserSession, userProfile } = useAuth();
+  const { updatePassword, signOut, userProfile } = useAuth();
   const router = useRouter();
 
   const initialValues: PasswordSetupFormValues = {
@@ -38,32 +37,15 @@ export default function PasswordSetupModal({
   const handleContinue = useCallback(async () => {
     setIsContinueLoading(true);
     try {
-      await refreshUserSession();
+      await signOut();
       onClose();
-      router.push("/");
+      router.push("/login");
     } catch (error) {
-      console.error("Error refreshing session:", error);
+      console.error("Error signing out:", error);
     } finally {
       setIsContinueLoading(false);
     }
-  }, [refreshUserSession, onClose, router]);
-
-  useEffect(() => {
-    if (isSuccess && countdown > 0) {
-      const timer = setTimeout(() => {
-        setCountdown(countdown - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    } else if (isSuccess && countdown === 0) {
-      handleContinue();
-    }
-  }, [isSuccess, countdown, handleContinue]);
-
-  useEffect(() => {
-    if (isSuccess) {
-      setCountdown(5);
-    }
-  }, [isSuccess]);
+  }, [signOut, onClose, router]);
 
   const handleSubmit = async (values: PasswordSetupFormValues) => {
     setError("");
@@ -97,7 +79,7 @@ export default function PasswordSetupModal({
             <div className="text-center space-y-4">
               <div className="space-y-2">
                 <p className="text-gray-600 text-sm">
-                  Sekarang Anda dapat menggunakan semua fitur aplikasi.
+                  Login lagi yuk pakai password baru kamu
                 </p>
               </div>
 
@@ -106,7 +88,7 @@ export default function PasswordSetupModal({
                 className="w-full"
                 disabled={isContinueLoading}
               >
-                {isContinueLoading ? "Memuat..." : `Lanjutkan (${countdown})`}
+                {isContinueLoading ? "Memuat..." : "Lanjutkan"}
               </Button>
             </div>
           ) : (
