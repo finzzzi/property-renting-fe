@@ -7,17 +7,41 @@ import { Label } from "@/components/ui/label";
 import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Formik, Form, Field, ErrorMessage } from "formik";
+import { loginSchema, LoginFormValues } from "@/lib/validationSchemas";
 
 export default function Login() {
-  const { signInWithGoogle, signInWithFacebook, user } = useAuth();
+  const { signInWithGoogle, signInWithFacebook, user, signInWithPassword } =
+    useAuth();
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [loginError, setLoginError] = useState("");
 
   useEffect(() => {
     if (user) {
       router.push("/");
     }
   }, [user, router]);
+
+  const initialValues: LoginFormValues = {
+    email: "",
+    password: "",
+  };
+
+  const handleLogin = async (values: LoginFormValues) => {
+    setIsLoading(true);
+    setLoginError("");
+
+    try {
+      await signInWithPassword(values.email, values.password);
+    } catch (error) {
+      console.error("Error signing in:", error);
+      setLoginError("Email atau password tidak valid");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleGoogleSignIn = async () => {
     try {
@@ -50,44 +74,69 @@ export default function Login() {
 
           <Card className="w-full border-0 shadow-none">
             <CardContent className="pt-6">
-              <form className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder="contoh@gmail.com"
-                    required
-                  />
-                </div>
+              <Formik
+                initialValues={initialValues}
+                validationSchema={loginSchema}
+                onSubmit={handleLogin}
+              >
+                {({ isValid, dirty }) => (
+                  <Form className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Field
+                        as={Input}
+                        id="email"
+                        name="email"
+                        type="email"
+                        placeholder="contoh@gmail.com"
+                      />
+                      <ErrorMessage
+                        name="email"
+                        component="div"
+                        className="text-slate-700 text-sm"
+                      />
+                    </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Kata Sandi</Label>
-                    <a
-                      href="/forgot-password"
-                      className="text-sm text-blue-600 hover:text-blue-500"
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="password">Kata Sandi</Label>
+                        <a
+                          href="/forgot-password"
+                          className="text-sm text-blue-600 hover:text-blue-500"
+                        >
+                          Lupa kata sandi?
+                        </a>
+                      </div>
+                      <Field
+                        as={Input}
+                        id="password"
+                        name="password"
+                        type="password"
+                        placeholder="••••••••"
+                      />
+                      <ErrorMessage
+                        name="password"
+                        component="div"
+                        className="text-slate-700 text-sm"
+                      />
+                    </div>
+
+                    {loginError && (
+                      <div className="text-slate-700 text-sm text-center">
+                        {loginError}
+                      </div>
+                    )}
+
+                    <Button
+                      type="submit"
+                      className="w-full bg-black hover:bg-gray-800"
+                      disabled={isLoading || !isValid || !dirty}
                     >
-                      Lupa kata sandi?
-                    </a>
-                  </div>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    placeholder="••••••••"
-                    required
-                  />
-                </div>
-
-                <Button
-                  type="submit"
-                  className="w-full bg-black hover:bg-gray-800"
-                >
-                  Masuk
-                </Button>
-              </form>
+                      {isLoading ? "Memproses..." : "Masuk"}
+                    </Button>
+                  </Form>
+                )}
+              </Formik>
 
               <div className="mt-6">
                 <div className="relative">

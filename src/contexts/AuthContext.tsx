@@ -29,6 +29,7 @@ interface AuthContextType {
     fullName: string,
     role: string
   ) => Promise<void>;
+  signInWithPassword: (email: string, password: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
   refreshUserSession: () => Promise<void>;
   checkEmailExists: (email: string) => Promise<boolean>;
@@ -239,6 +240,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const signInWithPassword = async (email: string, password: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        console.error("Error signing in with password:", error);
+        throw error;
+      }
+    } catch (error) {
+      console.error("Error signing in with password:", error);
+      throw error;
+    }
+  };
+
   const updatePassword = async (password: string) => {
     try {
       const { error: rpcError } = await supabase.rpc(
@@ -322,6 +340,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signInWithGoogle,
     signInWithFacebook,
     signInWithEmail,
+    signInWithPassword,
     updatePassword,
     refreshUserSession,
     checkEmailExists,

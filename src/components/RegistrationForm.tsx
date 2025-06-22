@@ -3,6 +3,11 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { Formik, Form, Field, ErrorMessage } from "formik";
+import {
+  registrationSchema,
+  RegistrationFormValues,
+} from "@/lib/validationSchemas";
 
 interface RegistrationFormProps {
   type: "traveler" | "owner";
@@ -22,40 +27,32 @@ export default function RegistrationForm({
   onShowVerifyModal,
 }: RegistrationFormProps) {
   const isOwner = type === "owner";
-  const [formData, setFormData] = useState({
-    nama: "",
-    email: "",
-  });
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
   const { signInWithEmail, checkEmailExists } = useAuth();
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+  const initialValues: RegistrationFormValues = {
+    nama: "",
+    email: "",
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (values: RegistrationFormValues) => {
     setIsLoading(true);
     setMessage("");
 
     try {
-      const emailExists = await checkEmailExists(formData.email);
+      const emailExists = await checkEmailExists(values.email);
 
       if (emailExists) {
-        setMessage(
-          "Email tersebut sudah terdaftar. Silakan gunakan email lain."
-        );
+        setMessage("Email telah terdaftar. Silakan gunakan email lain.");
         return;
       }
 
-      await signInWithEmail(formData.email, formData.nama, type);
-      onShowVerifyModal(formData.email, formData.nama, type);
+      await signInWithEmail(values.email, values.nama, type);
+      onShowVerifyModal(values.email, values.nama, type);
     } catch (error) {
       console.error("Error registering:", error);
+      setMessage("Terjadi kesalahan saat mendaftar. Silakan coba lagi.");
     } finally {
       setIsLoading(false);
     }
@@ -71,44 +68,63 @@ export default function RegistrationForm({
         </p>
       </div>
 
-      <form className="space-y-4" onSubmit={handleSubmit}>
-        <div className="space-y-2">
-          <Label htmlFor={`nama-${type}`}>Nama Lengkap</Label>
-          <Input
-            id={`nama-${type}`}
-            name="nama"
-            type="text"
-            placeholder="Masukkan nama lengkap"
-            required
-            value={formData.nama}
-            onChange={handleInputChange}
-          />
-        </div>
+      <Formik
+        initialValues={initialValues}
+        validationSchema={registrationSchema}
+        onSubmit={handleSubmit}
+      >
+        {({ isValid, dirty }) => (
+          <Form className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor={`nama-${type}`}>Nama Lengkap</Label>
+              <Field
+                as={Input}
+                id={`nama-${type}`}
+                name="nama"
+                type="text"
+                placeholder="Masukkan nama lengkap"
+              />
+              <ErrorMessage
+                name="nama"
+                component="div"
+                className="text-slate-700 text-sm"
+              />
+            </div>
 
-        <div className="space-y-2">
-          <Label htmlFor={`email-${type}`}>Email</Label>
-          <Input
-            id={`email-${type}`}
-            name="email"
-            type="email"
-            placeholder="Masukkan email"
-            required
-            value={formData.email}
-            onChange={handleInputChange}
-          />
-        </div>
-        {message && (
-          <div className="mt-4 text-center text-sm text-gray-500">
-            {message}
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor={`email-${type}`}>Email</Label>
+              <Field
+                as={Input}
+                id={`email-${type}`}
+                name="email"
+                type="email"
+                placeholder="Masukkan email"
+              />
+              <ErrorMessage
+                name="email"
+                component="div"
+                className="text-slate-700 text-sm"
+              />
+            </div>
+
+            {message && (
+              <div className="mt-4 text-center text-sm text-slate-700">
+                {message}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isLoading || !isValid || !dirty}
+            >
+              {isLoading
+                ? "Mendaftar..."
+                : `Daftar sebagai ${isOwner ? "Owner" : "Traveler"}`}
+            </Button>
+          </Form>
         )}
-
-        <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading
-            ? "Mendaftar..."
-            : `Daftar sebagai ${isOwner ? "Owner" : "Traveler"}`}
-        </Button>
-      </form>
+      </Formik>
 
       {/* Social Login Section */}
       <div className="mt-4 sm:mt-6">

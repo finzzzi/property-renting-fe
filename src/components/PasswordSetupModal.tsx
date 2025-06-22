@@ -7,6 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import { Formik, Form, Field, ErrorMessage } from "formik";
+import {
+  passwordSetupSchema,
+  PasswordSetupFormValues,
+} from "@/lib/validationSchemas";
 
 interface PasswordSetupModalProps {
   isOpen: boolean;
@@ -17,8 +22,6 @@ export default function PasswordSetupModal({
   isOpen,
   onClose,
 }: PasswordSetupModalProps) {
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
@@ -26,6 +29,11 @@ export default function PasswordSetupModal({
   const [countdown, setCountdown] = useState(5);
   const { updatePassword, refreshUserSession } = useAuth();
   const router = useRouter();
+
+  const initialValues: PasswordSetupFormValues = {
+    password: "",
+    confirmPassword: "",
+  };
 
   const handleContinue = useCallback(async () => {
     setIsContinueLoading(true);
@@ -57,23 +65,12 @@ export default function PasswordSetupModal({
     }
   }, [isSuccess]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (values: PasswordSetupFormValues) => {
     setError("");
-
-    if (password !== confirmPassword) {
-      setError("Password tidak cocok");
-      return;
-    }
-
-    if (password.length < 6) {
-      setError("Password minimal 6 karakter");
-      return;
-    }
-
     setIsLoading(true);
+
     try {
-      await updatePassword(password);
+      await updatePassword(values.password);
       setIsSuccess(true);
     } catch (error) {
       console.error("Error updating password:", error);
@@ -116,45 +113,65 @@ export default function PasswordSetupModal({
                 Silakan buat password baru untuk melanjutkan.
               </p>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password Baru</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Masukkan password baru"
-                    required
-                    minLength={6}
-                    disabled={isLoading}
-                  />
-                </div>
+              <Formik
+                initialValues={initialValues}
+                validationSchema={passwordSetupSchema}
+                onSubmit={handleSubmit}
+              >
+                {({ isValid, dirty }) => (
+                  <Form className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Password Baru</Label>
+                      <Field
+                        as={Input}
+                        id="password"
+                        name="password"
+                        type="password"
+                        placeholder="Masukkan password baru"
+                        disabled={isLoading}
+                      />
+                      <ErrorMessage
+                        name="password"
+                        component="div"
+                        className="text-slate-700 text-sm"
+                      />
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Konfirmasi Password</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Konfirmasi password baru"
-                    required
-                    minLength={6}
-                    disabled={isLoading}
-                  />
-                </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmPassword">
+                        Konfirmasi Password
+                      </Label>
+                      <Field
+                        as={Input}
+                        id="confirmPassword"
+                        name="confirmPassword"
+                        type="password"
+                        placeholder="Konfirmasi password baru"
+                        disabled={isLoading}
+                      />
+                      <ErrorMessage
+                        name="confirmPassword"
+                        component="div"
+                        className="text-slate-700 text-sm"
+                      />
+                    </div>
 
-                {error && (
-                  <div className="text-gray-500 text-sm text-center">
-                    {error}
-                  </div>
+                    {error && (
+                      <div className="text-slate-700 text-sm text-center">
+                        {error}
+                      </div>
+                    )}
+
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={isLoading || !isValid || !dirty}
+                    >
+                      {isLoading ? "Menyimpan..." : "Simpan Password"}
+                    </Button>
+                  </Form>
                 )}
-
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Menyimpan..." : "Simpan Password"}
-                </Button>
-              </form>
+              </Formik>
             </>
           )}
         </CardContent>
