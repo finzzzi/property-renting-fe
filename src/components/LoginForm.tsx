@@ -20,7 +20,7 @@ export default function LoginForm({
   const isOwner = type === "owner";
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
-  const { signInWithPassword, checkEmailExists } = useAuth();
+  const { signInWithPassword, checkEmailExists, checkUserRole } = useAuth();
 
   const initialValues: LoginFormValues = {
     email: "",
@@ -37,6 +37,19 @@ export default function LoginForm({
       if (!emailExists) {
         setLoginError("Email belum terdaftar");
         return;
+      }
+
+      const userRoleResult = await checkUserRole(values.email);
+
+      if (userRoleResult.exists && userRoleResult.role) {
+        if (userRoleResult.role !== type) {
+          const currentRole =
+            userRoleResult.role === "traveler" ? "traveler" : "owner";
+          setLoginError(
+            `Akun anda terdaftar sebagai ${currentRole}, silakan masuk sesuai jenis akun`
+          );
+          return;
+        }
       }
 
       try {

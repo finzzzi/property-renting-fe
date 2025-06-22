@@ -29,7 +29,11 @@ export default function RegistrationForm({
   const isOwner = type === "owner";
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
-  const { signInWithEmail, checkEmailExists } = useAuth();
+  const [shouldContinueVerification, setShouldContinueVerification] =
+    useState(false);
+  const [pendingEmail, setPendingEmail] = useState("");
+  const [pendingName, setPendingName] = useState("");
+  const { signInWithEmail, checkEmailStatus } = useAuth();
 
   const initialValues: RegistrationFormValues = {
     nama: "",
@@ -39,12 +43,23 @@ export default function RegistrationForm({
   const handleSubmit = async (values: RegistrationFormValues) => {
     setIsLoading(true);
     setMessage("");
+    setShouldContinueVerification(false);
 
     try {
-      const emailExists = await checkEmailExists(values.email);
+      const emailStatus = await checkEmailStatus(values.email);
 
-      if (emailExists) {
-        setMessage("Email telah terdaftar. Silakan gunakan email lain.");
+      if (emailStatus.exists && emailStatus.verified) {
+        setMessage("Email sudah terdaftar. Silakan gunakan email lain.");
+        return;
+      }
+
+      if (emailStatus.exists && !emailStatus.verified) {
+        setMessage(
+          "Email sudah terdaftar, silakan lanjutkan proses verifikasi"
+        );
+        setShouldContinueVerification(true);
+        setPendingEmail(values.email);
+        setPendingName(values.nama);
         return;
       }
 
@@ -53,6 +68,26 @@ export default function RegistrationForm({
     } catch (error) {
       console.error("Error registering:", error);
       setMessage("Terjadi kesalahan saat mendaftar. Silakan coba lagi.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleContinueVerification = async () => {
+    setIsLoading(true);
+    setMessage("");
+
+    try {
+      await signInWithEmail(pendingEmail, pendingName, type);
+      onShowVerifyModal(pendingEmail, pendingName, type);
+      setShouldContinueVerification(false);
+      setPendingEmail("");
+      setPendingName("");
+    } catch (error) {
+      console.error("Error continuing verification:", error);
+      setMessage(
+        "Terjadi kesalahan saat melanjutkan verifikasi. Silakan coba lagi."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -113,15 +148,28 @@ export default function RegistrationForm({
               </div>
             )}
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading || !isValid || !dirty}
-            >
-              {isLoading
-                ? "Mendaftar..."
-                : `Daftar sebagai ${isOwner ? "Owner" : "Traveler"}`}
-            </Button>
+            {shouldContinueVerification ? (
+              <Button
+                type="button"
+                className="w-full"
+                disabled={isLoading}
+                onClick={handleContinueVerification}
+              >
+                {isLoading
+                  ? "Melanjutkan verifikasi..."
+                  : "Lanjutkan Verifikasi"}
+              </Button>
+            ) : (
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isLoading || !isValid || !dirty}
+              >
+                {isLoading
+                  ? "Mendaftar..."
+                  : `Daftar sebagai ${isOwner ? "Owner" : "Traveler"}`}
+              </Button>
+            )}
           </Form>
         )}
       </Formik>

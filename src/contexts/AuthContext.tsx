@@ -17,6 +17,17 @@ interface UserProfile {
   updated_at?: string;
 }
 
+interface EmailStatusResult {
+  exists: boolean;
+  verified: boolean;
+  userId?: string;
+}
+
+interface UserRoleResult {
+  exists: boolean;
+  role?: "traveler" | "owner";
+}
+
 interface AuthContextType {
   user: User | null;
   userProfile: UserProfile | null;
@@ -33,6 +44,8 @@ interface AuthContextType {
   updatePassword: (password: string) => Promise<void>;
   refreshUserSession: () => Promise<void>;
   checkEmailExists: (email: string) => Promise<boolean>;
+  checkEmailStatus: (email: string) => Promise<EmailStatusResult>;
+  checkUserRole: (email: string) => Promise<UserRoleResult>;
   signOut: () => Promise<void>;
 }
 
@@ -332,6 +345,94 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const checkEmailStatus = async (
+    email: string
+  ): Promise<EmailStatusResult> => {
+    try {
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("id")
+        .eq("email", email)
+        .single();
+
+      if (userError && userError.code !== "PGRST116") {
+        console.error("Error checking email in users table:", userError);
+        throw userError;
+      }
+
+      if (!userData) {
+        return { exists: false, verified: false };
+      }
+
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/get-confirmation-status`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+            },
+            body: JSON.stringify({ user_id: userData.id }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.error) {
+          throw new Error(result.error);
+        }
+
+        return {
+          exists: true,
+          verified: !!result.email_confirmed_at,
+          userId: userData.id,
+        };
+      } catch (functionError) {
+        console.error("Error calling edge function:", functionError);
+        return {
+          exists: true,
+          verified: false,
+          userId: userData.id,
+        };
+      }
+    } catch (error) {
+      console.error("Error checking email status:", error);
+      throw error;
+    }
+  };
+
+  const checkUserRole = async (email: string): Promise<UserRoleResult> => {
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .select("role")
+        .eq("email", email)
+        .single();
+
+      if (error && error.code !== "PGRST116") {
+        console.error("Error checking user role:", error);
+        throw error;
+      }
+
+      if (!data) {
+        return { exists: false };
+      }
+
+      return {
+        exists: true,
+        role: data.role as "traveler" | "owner",
+      };
+    } catch (error) {
+      console.error("Error checking user role:", error);
+      throw error;
+    }
+  };
+
   const value = {
     user,
     userProfile,
@@ -344,6 +445,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     updatePassword,
     refreshUserSession,
     checkEmailExists,
+    checkEmailStatus,
+    checkUserRole,
     signOut,
   };
 
