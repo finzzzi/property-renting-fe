@@ -7,10 +7,17 @@ import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import RegistrationForm from "@/components/RegistrationForm";
+import VerifyEmailModal from "@/components/VerifyEmailModal";
 
 export default function Register() {
   const [activeTab, setActiveTab] = useState("traveler");
   const [slidePosition, setSlidePosition] = useState(0);
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [verifyEmailData, setVerifyEmailData] = useState({
+    email: "",
+    fullName: "",
+    role: "traveler" as "traveler" | "owner",
+  });
   const { signInWithGoogle, signInWithFacebook, user } = useAuth();
   const router = useRouter();
 
@@ -18,10 +25,11 @@ export default function Register() {
     setSlidePosition(activeTab === "traveler" ? 0 : -50);
   }, [activeTab]);
 
-  if (user) {
-    router.push("/");
-    return null;
-  }
+  useEffect(() => {
+    if (user) {
+      router.push("/");
+    }
+  }, [user, router]);
 
   const handleGoogleSignIn = async () => {
     try {
@@ -39,6 +47,15 @@ export default function Register() {
     } catch (error) {
       console.error("Error signing in with Facebook:", error);
     }
+  };
+
+  const handleShowVerifyModal = (
+    email: string,
+    fullName: string,
+    role: "traveler" | "owner"
+  ) => {
+    setVerifyEmailData({ email, fullName, role });
+    setShowVerifyModal(true);
   };
 
   return (
@@ -77,11 +94,13 @@ export default function Register() {
                       type="traveler"
                       onGoogleSignIn={handleGoogleSignIn}
                       onFacebookSignIn={handleFacebookSignIn}
+                      onShowVerifyModal={handleShowVerifyModal}
                     />
                     <RegistrationForm
                       type="owner"
                       onGoogleSignIn={handleGoogleSignIn}
                       onFacebookSignIn={handleFacebookSignIn}
+                      onShowVerifyModal={handleShowVerifyModal}
                     />
                   </div>
                 </div>
@@ -113,6 +132,16 @@ export default function Register() {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
       </div>
+
+      {showVerifyModal && (
+        <VerifyEmailModal
+          isOpen={showVerifyModal}
+          email={verifyEmailData.email}
+          fullName={verifyEmailData.fullName}
+          role={verifyEmailData.role}
+          onClose={() => setShowVerifyModal(false)}
+        />
+      )}
     </div>
   );
 }

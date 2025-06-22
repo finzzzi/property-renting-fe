@@ -1,19 +1,57 @@
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface RegistrationFormProps {
   type: "traveler" | "owner";
   onGoogleSignIn: () => void;
   onFacebookSignIn: () => void;
+  onShowVerifyModal: (
+    email: string,
+    fullName: string,
+    role: "traveler" | "owner"
+  ) => void;
 }
 
 export default function RegistrationForm({
   type,
   onGoogleSignIn,
   onFacebookSignIn,
+  onShowVerifyModal,
 }: RegistrationFormProps) {
   const isOwner = type === "owner";
+  const [formData, setFormData] = useState({
+    nama: "",
+    email: "",
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const { signInWithEmail } = useAuth();
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setMessage("");
+
+    try {
+      await signInWithEmail(formData.email, formData.nama, type);
+      onShowVerifyModal(formData.email, formData.nama, type);
+    } catch (error) {
+      console.error("Error registering:", error);
+      setMessage("Terjadi kesalahan. Silakan coba lagi.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="w-1/2 space-y-3 sm:space-y-4 px-2 sm:px-1">
@@ -25,7 +63,7 @@ export default function RegistrationForm({
         </p>
       </div>
 
-      <form className="space-y-4">
+      <form className="space-y-4" onSubmit={handleSubmit}>
         <div className="space-y-2">
           <Label htmlFor={`nama-${type}`}>Nama Lengkap</Label>
           <Input
@@ -34,6 +72,8 @@ export default function RegistrationForm({
             type="text"
             placeholder="Masukkan nama lengkap"
             required
+            value={formData.nama}
+            onChange={handleInputChange}
           />
         </div>
 
@@ -45,11 +85,15 @@ export default function RegistrationForm({
             type="email"
             placeholder="Masukkan email"
             required
+            value={formData.email}
+            onChange={handleInputChange}
           />
         </div>
 
-        <Button type="submit" className="w-full">
-          Daftar sebagai {isOwner ? "Owner" : "Traveler"}
+        <Button type="submit" className="w-full" disabled={isLoading}>
+          {isLoading
+            ? "Mendaftar..."
+            : `Daftar sebagai ${isOwner ? "Owner" : "Traveler"}`}
         </Button>
       </form>
 
@@ -105,6 +149,10 @@ export default function RegistrationForm({
           </Button>
         </div>
       </div>
+
+      {message && (
+        <div className="mt-4 text-center text-sm text-gray-500">{message}</div>
+      )}
     </div>
   );
 }

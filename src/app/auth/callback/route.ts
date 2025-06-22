@@ -6,13 +6,10 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/";
 
-  console.log("Auth callback - code:", code ? "present" : "missing");
-
   if (code) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      console.log("Auth callback - session exchanged successfully");
       return NextResponse.redirect(`${origin}${next}`);
     } else {
       console.error("Auth callback - error exchanging code:", error);

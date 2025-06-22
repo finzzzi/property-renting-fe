@@ -94,7 +94,7 @@ const Navbar = () => {
                   <Link href="/login">Login</Link>
                 </Button>
                 <Button
-                  className="bg-blue-500 hover:bg-blue-600 text-white font-bold"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
                   asChild
                 >
                   <Link href="/register">Register</Link>

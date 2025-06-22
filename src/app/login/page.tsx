@@ -7,15 +7,17 @@ import { Label } from "@/components/ui/label";
 import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function Login() {
   const { signInWithGoogle, signInWithFacebook, user } = useAuth();
   const router = useRouter();
 
-  if (user) {
-    router.push("/");
-    return null;
-  }
+  useEffect(() => {
+    if (user) {
+      router.push("/");
+    }
+  }, [user, router]);
 
   const handleGoogleSignIn = async () => {
     try {

@@ -24,6 +24,13 @@ interface AuthContextType {
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   signInWithFacebook: () => Promise<void>;
+  signInWithEmail: (
+    email: string,
+    fullName: string,
+    role: string
+  ) => Promise<void>;
+  updatePassword: (password: string) => Promise<void>;
+  refreshUserSession: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -37,6 +44,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const supabase = createClient();
 
+  const isEmailProvider = (user: User) => {
+    return user.app_metadata?.provider === "email";
+  };
+
+  const updateOAuthUserRole = async (userId: string) => {
+    const role = localStorage.getItem("selectedRole");
+    if (!role) return;
+
+    try {
+      const { data: existingUser } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", userId)
+        .single();
+
+      if (!existingUser?.role) {
+        await supabase.from("users").update({ role }).eq("id", userId);
+      }
+    } catch (roleError) {
+      console.error("Error updating role for OAuth user:", roleError);
+    } finally {
+      localStorage.removeItem("selectedRole");
+    }
+  };
+
   useEffect(() => {
     const getSession = async () => {
       try {
@@ -49,34 +81,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          const role = localStorage.getItem("selectedRole");
-          if (role) {
-            try {
-              const { data: existingUser } = await supabase
-                .from("users")
-                .select("role")
-                .eq("id", session.user.id)
-                .single();
-
-              if (!existingUser?.role) {
-                await supabase.auth.updateUser({ data: { role } });
-                await supabase
-                  .from("users")
-                  .update({ role })
-                  .eq("id", session.user.id);
-                localStorage.removeItem("selectedRole");
-                console.log("Role updated:", role);
-              } else {
-                localStorage.removeItem("selectedRole");
-                console.log(
-                  "Role sudah ada, tidak perlu update:",
-                  existingUser.role
-                );
-              }
-            } catch (roleError) {
-              console.error("Error updating role:", roleError);
-              localStorage.removeItem("selectedRole");
-            }
+          if (!isEmailProvider(session.user)) {
+            await updateOAuthUserRole(session.user.id);
           }
 
           try {
@@ -200,6 +206,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const signInWithEmail = async (
+    email: string,
+    fullName: string,
+    role: string
+  ) => {
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+          data: {
+            full_name: fullName,
+            role: role,
+          },
+        },
+      });
+
+      if (error) {
+        console.error("Error signing in with email:", error);
+        throw error;
+      }
+    } catch (error) {
+      console.error("Error signing in with email:", error);
+      throw error;
+    }
+  };
+
+  const updatePassword = async (password: string) => {
+    try {
+      const { error: rpcError } = await supabase.rpc(
+        "update_user_password_and_metadata",
+        {
+          user_id: user?.id,
+          new_password: password,
+        }
+      );
+
+      if (rpcError) {
+        console.error("Error updating password and metadata:", rpcError);
+        throw rpcError;
+      }
+    } catch (error) {
+      console.error("Error updating password:", error);
+      throw error;
+    }
+  };
+
   const signOut = async () => {
     try {
       const { error } = await supabase.auth.signOut();
@@ -213,6 +266,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const refreshUserSession = async () => {
+    try {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.refreshSession();
+
+      if (sessionError) {
+        console.error("Error refreshing session:", sessionError);
+        throw sessionError;
+      } else if (session?.user) {
+        setUser(session.user);
+        setSession(session);
+
+        await fetchUserProfile(session.user.id);
+      }
+    } catch (error) {
+      console.error("Error refreshing user session:", error);
+      throw error;
+    }
+  };
+
   const value = {
     user,
     userProfile,
@@ -220,6 +295,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading,
     signInWithGoogle,
     signInWithFacebook,
+    signInWithEmail,
+    updatePassword,
+    refreshUserSession,
     signOut,
   };
 

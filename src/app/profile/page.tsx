@@ -2,14 +2,15 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { User, Mail, Phone, MapPin } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import PasswordSetupModal from "@/components/PasswordSetupModal";
 
 export default function Profile() {
   const { user, userProfile, loading } = useAuth();
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -17,6 +18,23 @@ export default function Profile() {
       router.push("/login");
     }
   }, [user, loading, router]);
+
+  useEffect(() => {
+    if (user && user.app_metadata) {
+      const hasPassword = user.app_metadata.has_password;
+      const provider = user.app_metadata.provider;
+
+      if (provider === "email" && !hasPassword) {
+        setShowPasswordModal(true);
+      } else {
+        setShowPasswordModal(false);
+      }
+    }
+  }, [user]);
+
+  const handlePasswordModalClose = () => {
+    setShowPasswordModal(false);
+  };
 
   if (loading) {
     return (
@@ -106,6 +124,11 @@ export default function Profile() {
           </CardContent>
         </Card>
       </div>
+
+      <PasswordSetupModal
+        isOpen={showPasswordModal}
+        onClose={handlePasswordModalClose}
+      />
     </div>
   );
 }
