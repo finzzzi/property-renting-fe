@@ -31,6 +31,7 @@ interface AuthContextType {
   ) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
   refreshUserSession: () => Promise<void>;
+  checkEmailExists: (email: string) => Promise<boolean>;
   signOut: () => Promise<void>;
 }
 
@@ -60,6 +61,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (!existingUser?.role) {
+        await supabase.auth.updateUser({
+          data: {
+            role: role,
+          },
+        });
         await supabase.from("users").update({ role }).eq("id", userId);
       }
     } catch (roleError) {
@@ -288,6 +294,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const checkEmailExists = async (email: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .select("id")
+        .eq("email", email)
+        .single();
+
+      if (error && error.code !== "PGRST116") {
+        console.error("Error checking email existence:", error);
+        throw error;
+      }
+
+      return !!data;
+    } catch (error) {
+      console.error("Error checking email existence:", error);
+      throw error;
+    }
+  };
+
   const value = {
     user,
     userProfile,
@@ -298,6 +324,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signInWithEmail,
     updatePassword,
     refreshUserSession,
+    checkEmailExists,
     signOut,
   };
 

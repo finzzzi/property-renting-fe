@@ -28,7 +28,7 @@ export default function RegistrationForm({
   });
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
-  const { signInWithEmail } = useAuth();
+  const { signInWithEmail, checkEmailExists } = useAuth();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -43,11 +43,19 @@ export default function RegistrationForm({
     setMessage("");
 
     try {
+      const emailExists = await checkEmailExists(formData.email);
+
+      if (emailExists) {
+        setMessage(
+          "Email tersebut sudah terdaftar. Silakan gunakan email lain."
+        );
+        return;
+      }
+
       await signInWithEmail(formData.email, formData.nama, type);
       onShowVerifyModal(formData.email, formData.nama, type);
     } catch (error) {
       console.error("Error registering:", error);
-      setMessage("Terjadi kesalahan. Silakan coba lagi.");
     } finally {
       setIsLoading(false);
     }
@@ -89,6 +97,11 @@ export default function RegistrationForm({
             onChange={handleInputChange}
           />
         </div>
+        {message && (
+          <div className="mt-4 text-center text-sm text-gray-500">
+            {message}
+          </div>
+        )}
 
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading
@@ -149,10 +162,6 @@ export default function RegistrationForm({
           </Button>
         </div>
       </div>
-
-      {message && (
-        <div className="mt-4 text-center text-sm text-gray-500">{message}</div>
-      )}
     </div>
   );
 }
