@@ -22,7 +22,6 @@ export default function Login() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
-  const [emailNotRegistered, setEmailNotRegistered] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -38,14 +37,12 @@ export default function Login() {
   const handleLogin = async (values: LoginFormValues) => {
     setIsLoading(true);
     setLoginError("");
-    setEmailNotRegistered(false);
 
     try {
       const emailExists = await checkEmailExists(values.email);
 
       if (!emailExists) {
         setLoginError("Email belum terdaftar");
-        setEmailNotRegistered(true);
         return;
       }
 

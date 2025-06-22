@@ -27,7 +27,7 @@ export default function PasswordSetupModal({
   const [isSuccess, setIsSuccess] = useState(false);
   const [isContinueLoading, setIsContinueLoading] = useState(false);
   const [countdown, setCountdown] = useState(5);
-  const { updatePassword, refreshUserSession } = useAuth();
+  const { updatePassword, refreshUserSession, userProfile } = useAuth();
   const router = useRouter();
 
   const initialValues: PasswordSetupFormValues = {
@@ -87,7 +87,9 @@ export default function PasswordSetupModal({
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-center">
-            {isSuccess ? "Password Berhasil Disimpan!" : "Selamat Datang!"}
+            {isSuccess
+              ? "Password Berhasil Disimpan!"
+              : `Selamat Datang ${userProfile?.name}!`}
           </CardTitle>
         </CardHeader>
         <CardContent>
