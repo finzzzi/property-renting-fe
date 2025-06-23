@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Fira_Sans } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import { AuthProvider } from "@/contexts/AuthContext";
 
 const geistSans = Geist({
@@ -37,7 +38,8 @@ export default function RootLayout({
       >
         <AuthProvider>
           <Navbar />
-          {children}
+          <main>{children}</main>
+          <Footer />
         </AuthProvider>
       </body>
     </html>
