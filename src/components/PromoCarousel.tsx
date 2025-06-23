@@ -12,11 +12,11 @@ import {
 } from "@/components/ui/carousel";
 
 const promoImages = [
-  "https://gsrmrmnpzzklayfvgezl.supabase.co/storage/v1/object/public/promo-images/1.png",
   "https://gsrmrmnpzzklayfvgezl.supabase.co/storage/v1/object/public/promo-images/2.png",
-  "https://gsrmrmnpzzklayfvgezl.supabase.co/storage/v1/object/public/promo-images/3.png",
-  "https://gsrmrmnpzzklayfvgezl.supabase.co/storage/v1/object/public/promo-images/4.png",
+  "https://gsrmrmnpzzklayfvgezl.supabase.co/storage/v1/object/public/promo-images/1.png",
   "https://gsrmrmnpzzklayfvgezl.supabase.co/storage/v1/object/public/promo-images/5.png",
+  "https://gsrmrmnpzzklayfvgezl.supabase.co/storage/v1/object/public/promo-images/4.png",
+  "https://gsrmrmnpzzklayfvgezl.supabase.co/storage/v1/object/public/promo-images/3.png",
 ];
 
 const PromoCarousel = () => {
