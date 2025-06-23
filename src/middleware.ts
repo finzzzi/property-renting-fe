@@ -39,6 +39,7 @@ export async function middleware(request: NextRequest) {
     "/profile",
     "/auth/callback",
     "/auth/auth-code-error",
+    "/reset-password",
   ];
   const isExcludedPath = excludedPaths.some((path) =>
     request.nextUrl.pathname.startsWith(path)

@@ -20,8 +20,11 @@ import {
   checkEmailExists,
   checkEmailStatus,
   checkUserRole,
+  checkHasPassword,
   isEmailProvider,
   updateOAuthUserRole,
+  resetPassword,
+  updatePasswordWithToken,
 } from "@/lib/auth";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -84,7 +87,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (event === "SIGNED_IN" && session?.user) {
         await handleUserProfile(session.user.id);
-        router.push("/");
+
+        if (
+          typeof window !== "undefined" &&
+          !window.location.pathname.includes("/reset-password")
+        ) {
+          router.push("/");
+        }
       } else if (event === "SIGNED_OUT") {
         setUserProfile(null);
         router.push("/");
@@ -143,6 +152,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     checkEmailExists,
     checkEmailStatus,
     checkUserRole,
+    checkHasPassword,
+    resetPassword,
+    updatePasswordWithToken,
     signOut,
   };
 

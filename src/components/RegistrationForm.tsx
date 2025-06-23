@@ -8,6 +8,7 @@ import {
   registrationSchema,
   RegistrationFormValues,
 } from "@/lib/validationSchemas";
+import { TriangleAlert } from "lucide-react";
 
 interface RegistrationFormProps {
   type: "traveler" | "owner";
@@ -142,24 +143,30 @@ export default function RegistrationForm({
               />
             </div>
 
-            {message && (
-              <div className="mt-4 text-center text-sm text-slate-700">
+            {message && shouldContinueVerification && (
+              <div className="text-center p-4 bg-gray-100 rounded-lg border">
+                <p className="text-sm text-gray-700 mb-3">{message}</p>
+                <Button
+                  type="button"
+                  className="w-full bg-slate-800 hover:bg-slate-900"
+                  disabled={isLoading}
+                  onClick={handleContinueVerification}
+                >
+                  {isLoading
+                    ? "Melanjutkan verifikasi..."
+                    : "Lanjutkan Verifikasi"}
+                </Button>
+              </div>
+            )}
+
+            {message && !shouldContinueVerification && (
+              <div className="mt-4 text-slate-700 text-sm flex items-center gap-2 justify-center">
+                <TriangleAlert className="w-4 h-4" />
                 {message}
               </div>
             )}
 
-            {shouldContinueVerification ? (
-              <Button
-                type="button"
-                className="w-full"
-                disabled={isLoading}
-                onClick={handleContinueVerification}
-              >
-                {isLoading
-                  ? "Melanjutkan verifikasi..."
-                  : "Lanjutkan Verifikasi"}
-              </Button>
-            ) : (
+            {!shouldContinueVerification && (
               <Button
                 type="submit"
                 className="w-full"

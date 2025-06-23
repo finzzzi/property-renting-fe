@@ -7,10 +7,13 @@ import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import LoginForm from "@/components/LoginForm";
+import ForgotPasswordModal from "@/components/ForgotPasswordModal";
 
 export default function Login() {
   const [activeTab, setActiveTab] = useState("traveler");
   const [slidePosition, setSlidePosition] = useState(0);
+  const [isForgotPasswordModalOpen, setIsForgotPasswordModalOpen] =
+    useState(false);
   const { signInWithGoogle, signInWithFacebook, user } = useAuth();
   const router = useRouter();
 
@@ -40,6 +43,10 @@ export default function Login() {
     } catch (error) {
       console.error("Error signing in with Facebook:", error);
     }
+  };
+
+  const handleForgotPasswordClick = () => {
+    setIsForgotPasswordModalOpen(true);
   };
 
   return (
@@ -78,11 +85,13 @@ export default function Login() {
                       type="traveler"
                       onGoogleSignIn={handleGoogleSignIn}
                       onFacebookSignIn={handleFacebookSignIn}
+                      onForgotPasswordClick={handleForgotPasswordClick}
                     />
                     <LoginForm
                       type="owner"
                       onGoogleSignIn={handleGoogleSignIn}
                       onFacebookSignIn={handleFacebookSignIn}
+                      onForgotPasswordClick={handleForgotPasswordClick}
                     />
                   </div>
                 </div>
@@ -114,6 +123,11 @@ export default function Login() {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
       </div>
+
+      <ForgotPasswordModal
+        isOpen={isForgotPasswordModalOpen}
+        onClose={() => setIsForgotPasswordModalOpen(false)}
+      />
     </div>
   );
 }

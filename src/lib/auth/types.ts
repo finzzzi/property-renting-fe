@@ -41,5 +41,8 @@ export interface AuthContextType {
   checkEmailExists: (email: string) => Promise<boolean>;
   checkEmailStatus: (email: string) => Promise<EmailStatusResult>;
   checkUserRole: (email: string) => Promise<UserRoleResult>;
+  checkHasPassword: (email: string) => Promise<boolean>;
+  resetPassword: (email: string) => Promise<void>;
+  updatePasswordWithToken: (newPassword: string) => Promise<void>;
   signOut: () => Promise<void>;
 }

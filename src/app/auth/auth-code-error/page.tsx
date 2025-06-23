@@ -2,14 +2,13 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Mail, RefreshCw } from "lucide-react";
 import Link from "next/link";
 
 export default function AuthCodeError() {
   const getErrorMessage = () => {
     return {
-      title: "Link Verifikasi Tidak Valid",
-      message: "Link verifikasi email kadaluarsa atau tidak valid",
+      title: "Link Tidak Valid",
+      message: "Link kadaluarsa atau tidak valid",
       icon: "⚠️",
     };
   };
@@ -34,18 +33,8 @@ export default function AuthCodeError() {
           </div>
 
           <div className="flex flex-col gap-2 pt-4">
-            <Link href="/register">
-              <Button className="w-full">
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Daftar Ulang
-              </Button>
-            </Link>
-
             <Link href="/login">
-              <Button variant="outline" className="w-full">
-                <Mail className="w-4 h-4 mr-2" />
-                Sudah Punya Akun? Masuk
-              </Button>
+              <Button className="w-full">Kembali ke halaman login</Button>
             </Link>
           </div>
         </CardContent>

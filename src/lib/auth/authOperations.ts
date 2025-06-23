@@ -148,3 +148,39 @@ export const refreshUserSession = async () => {
     throw error;
   }
 };
+
+export const resetPassword = async (email: string) => {
+  const supabase = createClient();
+
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?type=recovery`,
+    });
+
+    if (error) {
+      console.error("Error sending reset password email:", error);
+      throw error;
+    }
+  } catch (error) {
+    console.error("Error in reset password:", error);
+    throw error;
+  }
+};
+
+export const updatePasswordWithToken = async (newPassword: string) => {
+  const supabase = createClient();
+
+  try {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    if (error) {
+      console.error("Error updating password:", error);
+      throw error;
+    }
+  } catch (error) {
+    console.error("Error updating password with token:", error);
+    throw error;
+  }
+};

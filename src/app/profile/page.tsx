@@ -2,15 +2,19 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import { User, Mail, Phone, MapPin } from "lucide-react";
+import { User, Mail, Phone, MapPin, Lock, Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import PasswordSetupModal from "@/components/PasswordSetupModal";
 
 export default function Profile() {
-  const { user, userProfile, loading } = useAuth();
+  const { user, userProfile, loading, resetPassword } = useAuth();
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [isResetLoading, setIsResetLoading] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState(false);
+  const [resetError, setResetError] = useState("");
   const router = useRouter();
 
   useEffect(() => {
@@ -36,6 +40,26 @@ export default function Profile() {
     setShowPasswordModal(false);
   };
 
+  const handleChangePassword = async () => {
+    if (!user?.email) return;
+
+    setIsResetLoading(true);
+    setResetError("");
+    setResetSuccess(false);
+
+    try {
+      await resetPassword(user.email);
+      setResetSuccess(true);
+    } catch (error: any) {
+      console.error("Error sending reset password email:", error);
+      setResetError(
+        "Terjadi kesalahan saat mengirim email reset password. Silakan coba lagi."
+      );
+    } finally {
+      setIsResetLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -44,9 +68,15 @@ export default function Profile() {
     );
   }
 
+  // Show set password for new users
+  const hasPassword = user?.app_metadata?.has_password;
+  const provider = user?.app_metadata?.provider;
+  const canChangePassword = provider === "email" && hasPassword;
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+        {/* Profile Information Card */}
         <Card>
           <CardHeader>
             <CardTitle className="text-center">Profil Pengguna</CardTitle>
@@ -123,6 +153,57 @@ export default function Profile() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Settings Card */}
+        {canChangePassword && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Lock className="w-5 h-5" />
+                <span>Pengaturan</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex gap-2 items-center justify-between">
+                  <div>
+                    <h3 className="font-medium">Password</h3>
+                    <p className="text-sm text-gray-500">
+                      Kirim link reset password ke email Anda
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={handleChangePassword}
+                    disabled={isResetLoading}
+                    className="flex items-center space-x-2"
+                  >
+                    <Lock className="w-4 h-4" />
+                    <span>
+                      {isResetLoading ? "Mengirim..." : "Reset Password"}
+                    </span>
+                  </Button>
+                </div>
+
+                {/* Success Message */}
+                {resetSuccess && (
+                  <div className="flex items-center space-x-2 text-green-600 bg-gray-100 p-3 rounded-md justify-center">
+                    <span className="text-sm">
+                      Link reset password telah dikirim ke email Anda.
+                    </span>
+                  </div>
+                )}
+
+                {/* Error Message */}
+                {resetError && (
+                  <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">
+                    {resetError}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <PasswordSetupModal
