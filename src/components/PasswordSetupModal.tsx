@@ -79,7 +79,7 @@ export default function PasswordSetupModal({
             <div className="text-center space-y-4">
               <div className="space-y-2">
                 <p className="text-gray-600 text-sm">
-                  Login lagi yuk pakai password baru kamu
+                  Silakan login kembali dengan password baru Anda
                 </p>
               </div>
 

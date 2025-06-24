@@ -1,0 +1,152 @@
+[
+  {
+    "id": 1,
+    "tenant": "Fuad Basuki",
+    "category": "Guesthouse",
+    "name": "Omah Rindang Hijau",
+    "description": "Berlokasi dekat pusat kota Bandung. Luas 100 m2, 3 kamar tidur. Fasilitas lengkap cocok untuk keluarga.",
+    "location": "Jl. Raya Cibadak No. 123, Kota Bandung, Jawa Barat",
+    "city": {
+      "type": "Kota",
+      "name": "Bandung"
+    },
+    "price": 345000,
+    "picture": "https://gsrmrmnpzzklayfvgezl.supabase.co/storage/v1/object/public/property-image//placeholder2.jpg",
+    "rating": 4.5
+  },
+  {
+    "id": 2,
+    "tenant": "Dewi Hartati",
+    "category": "Villa",
+    "name": "Villa Puncak Nirwana",
+    "description": "Villa mewah dengan pemandangan pegunungan dan udara sejuk. 4 kamar tidur dan kolam renang pribadi.",
+    "location": "Jl. Raya Baturaden No. 77, Kabupaten Banyumas, Jawa Tengah",
+    "city": {
+      "type": "Kabupaten",
+      "name": "Banyumas"
+    },
+    "price": 1100000,
+    "picture": "https://gsrmrmnpzzklayfvgezl.supabase.co/storage/v1/object/public/property-image//placeholder2.jpg",
+    "rating": 4.5
+  },
+  {
+    "id": 3,
+    "tenant": "Andi Nugroho",
+    "category": "Homestay",
+    "name": "Rumah Singgah Jogja",
+    "description": "Homestay nyaman dan strategis dekat Malioboro, cocok untuk backpacker maupun keluarga kecil.",
+    "location": "Jl. Mataram No. 12, Kota Yogyakarta, DI Yogyakarta",
+    "city": {
+      "type": "Kota",
+      "name": "Yogyakarta"
+    },
+    "price": 285000,
+    "picture": "https://gsrmrmnpzzklayfvgezl.supabase.co/storage/v1/object/public/property-image//placeholder2.jpg",
+    "rating": 4
+  },
+  {
+    "id": 4,
+    "tenant": "Rina Sari",
+    "category": "Guesthouse",
+    "name": "Pondok Bahagia",
+    "description": "Penginapan sederhana di pusat Kota Semarang. Fasilitas lengkap dan harga terjangkau.",
+    "location": "Jl. Pandanaran No. 5, Kota Semarang, Jawa Tengah",
+    "city": {
+      "type": "Kota",
+      "name": "Semarang"
+    },
+    "price": 320000,
+    "picture": "https://gsrmrmnpzzklayfvgezl.supabase.co/storage/v1/object/public/property-image//placeholder2.jpg",
+    "rating": 4.5
+  },
+  {
+    "id": 5,
+    "tenant": "Taufik Hidayat",
+    "category": "Villa",
+    "name": "Villa Pantai Selatan",
+    "description": "Villa eksklusif dengan view langsung ke pantai. Private pool dan area BBQ tersedia.",
+    "location": "Jl. Parangtritis KM 28, Kabupaten Bantul, DI Yogyakarta",
+    "city": {
+      "type": "Kabupaten",
+      "name": "Bantul"
+    },
+    "price": 980000,
+    "picture": "https://gsrmrmnpzzklayfvgezl.supabase.co/storage/v1/object/public/property-image//placeholder2.jpg",
+    "rating": 4.9
+  },
+  {
+    "id": 6,
+    "tenant": "Siti Nurjanah",
+    "category": "Apartment",
+    "name": "Apartemen Surabaya Heights",
+    "description": "Apartemen modern di jantung Kota Surabaya. Akses mudah ke mall dan stasiun.",
+    "location": "Jl. Ahmad Yani No. 99, Kota Surabaya, Jawa Timur",
+    "city": {
+      "type": "Kota",
+      "name": "Surabaya"
+    },
+    "price": 495000,
+    "picture": "https://gsrmrmnpzzklayfvgezl.supabase.co/storage/v1/object/public/property-image//placeholder2.jpg",
+    "rating": 4.8
+  },
+  {
+    "id": 7,
+    "tenant": "Ahmad Fauzi",
+    "category": "Homestay",
+    "name": "Homestay Tepi Sawah",
+    "description": "Suasana tenang dengan pemandangan sawah. Fasilitas dapur dan tempat santai tersedia.",
+    "location": "Jl. Raya Sragi No. 88, Kabupaten Pekalongan, Jawa Tengah",
+    "city": {
+      "type": "Kabupaten",
+      "name": "Pekalongan"
+    },
+    "price": 250000,
+    "picture": "https://gsrmrmnpzzklayfvgezl.supabase.co/storage/v1/object/public/property-image//placeholder2.jpg",
+    "rating": 4.7
+  },
+  {
+    "id": 8,
+    "tenant": "Linda Mayasari",
+    "category": "Guesthouse",
+    "name": "Griya Asri Malang",
+    "description": "Penginapan keluarga di Malang dengan akses dekat ke wisata Jatim Park dan Batu.",
+    "location": "Jl. Soekarno-Hatta No. 22, Kota Malang, Jawa Timur",
+    "city": {
+      "type": "Kota",
+      "name": "Malang"
+    },
+    "price": 360000,
+    "picture": "https://gsrmrmnpzzklayfvgezl.supabase.co/storage/v1/object/public/property-image//placeholder2.jpg",
+    "rating": 4.6
+  },
+  {
+    "id": 9,
+    "tenant": "Bayu Dwi",
+    "category": "Villa",
+    "name": "Villa Pinus Sejuk",
+    "description": "Dikelilingi pepohonan pinus, cocok untuk staycation dan work from nature.",
+    "location": "Jl. Tawangmangu No. 15, Kabupaten Karanganyar, Jawa Tengah",
+    "city": {
+      "type": "Kabupaten",
+      "name": "Karanganyar"
+    },
+    "price": 875000,
+    "picture": "https://gsrmrmnpzzklayfvgezl.supabase.co/storage/v1/object/public/property-image//placeholder2.jpg",
+    "rating": 4.9
+  },
+  {
+    "id": 10,
+    "tenant": "Dian Sasmita",
+    "category": "Apartment",
+    "name": "Jakarta Skyline Apartment",
+    "description": "Apartemen eksklusif di pusat bisnis Jakarta Selatan. Fasilitas premium dan akses MRT.",
+    "location": "Jl. Gatot Subroto No. 55, Kota Jakarta Selatan, DKI Jakarta",
+    "city": {
+      "type": "Kota",
+      "name": "Jakarta Selatan"
+    },
+    "price": 690000,
+    "picture": "https://gsrmrmnpzzklayfvgezl.supabase.co/storage/v1/object/public/property-image//placeholder2.jpg",
+    "rating": 4.8
+  }
+]

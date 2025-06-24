@@ -102,7 +102,7 @@ const PromoCarousel = () => {
           ))}
         </CarouselContent>
 
-        <div className="hidden md:block">
+        <div className="hidden lg:block">
           <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2" />
           <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2" />
         </div>
@@ -113,7 +113,7 @@ const PromoCarousel = () => {
           {promoImages.map((_, index) => (
             <button
               key={index}
-              className={`w-3 h-3 rounded-full transition-all duration-300 ${
+              className={`w-2 h-2 rounded-full transition-all duration-300 ${
                 current === index
                   ? "bg-gray-800 scale-125"
                   : "bg-gray-300 hover:bg-gray-500"

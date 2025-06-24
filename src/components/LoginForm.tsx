@@ -209,8 +209,7 @@ export default function LoginForm({
                 </div>
 
                 {loginError && (
-                  <div className="text-slate-700 text-sm flex items-center gap-2 justify-center">
-                    <TriangleAlert className="w-4 h-4" />
+                  <div className="text-slate-700 text-sm flex items-center gap-2 justify-center text-center">
                     {loginError}
                   </div>
                 )}
