@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { CalendarIcon, MapPinIcon, UsersIcon, ClockIcon } from "lucide-react";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
@@ -29,8 +29,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
+import { createClient } from "@/lib/supabase/client";
 
-import citiesData from "../../public/data/cities.json";
+const supabase = createClient();
 
 interface City {
   id: number;
@@ -38,9 +39,28 @@ interface City {
   name: string;
 }
 
-const cities: City[] = citiesData;
+interface SearchFormData {
+  city_id: string;
+  check_in: string;
+  check_out: string;
+  guests: string;
+}
 
-const PropertySearchForm = () => {
+interface PropertySearchFormProps {
+  defaultValues?: {
+    city_id?: string;
+    check_in?: string;
+    check_out?: string;
+    guests?: string;
+  };
+  onSearch?: (searchData: SearchFormData) => void;
+}
+
+const PropertySearchForm = ({
+  defaultValues,
+  onSearch,
+}: PropertySearchFormProps) => {
+  const [cities, setCities] = useState<City[]>([]);
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
   const [checkInDate, setCheckInDate] = useState<Date>();
   const [duration, setDuration] = useState<string>("");
@@ -48,20 +68,77 @@ const PropertySearchForm = () => {
   const [cityPopoverOpen, setCityPopoverOpen] = useState(false);
   const [datePopoverOpen, setDatePopoverOpen] = useState(false);
 
+  useEffect(() => {
+    const fetchCities = async () => {
+      const { data: citiesData } = await supabase.from("cities").select("*");
+      setCities(citiesData || []);
+
+      // Set default city if provided
+      if (defaultValues?.city_id && citiesData) {
+        const defaultCity = citiesData.find(
+          (city) => city.id.toString() === defaultValues.city_id
+        );
+        if (defaultCity) {
+          setSelectedCity(defaultCity);
+        }
+      }
+    };
+    fetchCities();
+  }, [defaultValues?.city_id]);
+
+  // Set other default values
+  useEffect(() => {
+    if (defaultValues?.check_in) {
+      setCheckInDate(new Date(defaultValues.check_in));
+    }
+    if (defaultValues?.check_out && defaultValues?.check_in) {
+      const checkIn = new Date(defaultValues.check_in);
+      const checkOut = new Date(defaultValues.check_out);
+      const diffTime = Math.abs(checkOut.getTime() - checkIn.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      setDuration(diffDays.toString());
+    }
+    if (defaultValues?.guests) {
+      setGuests(defaultValues.guests);
+    }
+  }, [defaultValues]);
+
   const handleSearch = () => {
     if (!selectedCity || !checkInDate || !duration || !guests) {
       alert("Mohon lengkapi semua field pencarian");
       return;
     }
 
-    const searchData = {
-      city: selectedCity,
-      checkIn: checkInDate,
-      duration: duration,
+    // Calculate check_out date based on check_in and duration
+    const checkOutDate = new Date(checkInDate);
+    checkOutDate.setDate(checkOutDate.getDate() + parseInt(duration));
+
+    // Format date without timezone issues
+    const formatDateToString = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    const searchData: SearchFormData = {
+      city_id: selectedCity.id.toString(),
+      check_in: formatDateToString(checkInDate),
+      check_out: formatDateToString(checkOutDate),
       guests: guests,
     };
 
-    console.log(searchData);
+    if (onSearch) {
+      onSearch(searchData);
+    } else {
+      // Default behavior - navigate to search page
+      const searchParams = new URLSearchParams();
+      searchParams.set("city_id", searchData.city_id);
+      searchParams.set("check_in", searchData.check_in);
+      searchParams.set("check_out", searchData.check_out);
+      searchParams.set("guests", searchData.guests);
+      window.location.href = `/search?${searchParams.toString()}`;
+    }
   };
 
   return (
@@ -86,7 +163,11 @@ const PropertySearchForm = () => {
                     : "Pilih kota/kabupaten"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-full p-0">
+              <PopoverContent
+                className="p-0"
+                sideOffset={5}
+                style={{ width: "var(--radix-popover-trigger-width)" }}
+              >
                 <Command>
                   <CommandInput placeholder="Cari kota/kabupaten" />
                   <CommandList>
@@ -138,8 +219,15 @@ const PropertySearchForm = () => {
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
+                <PopoverContent
+                  className="w-auto p-0"
+                  sideOffset={5}
+                  style={{
+                    minWidth: "var(--radix-popover-trigger-width)",
+                  }}
+                >
                   <Calendar
+                    className="w-full"
                     mode="single"
                     selected={checkInDate}
                     onSelect={(date) => {

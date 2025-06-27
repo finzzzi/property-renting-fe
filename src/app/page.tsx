@@ -20,12 +20,12 @@ const Home = () => {
             <PropertySearchForm />
           </div>
         </div>
-        <div className="container mx-auto pr-0 lg:pr-4 px-4">
+        {/* <div className="container mx-auto pr-0 lg:pr-4 px-4">
           <h2 className="text-2xl font-bold text-gray-800 ">
             Properti Populer
           </h2>
           <FeaturedProperty />
-        </div>
+        </div> */}
       </div>
     </div>
   );
