@@ -22,11 +22,8 @@ const SearchHeader: React.FC<SearchHeaderProps> = ({ searchParams }) => {
 
   return (
     <div className="">
-      <div className="absolute top-0 left-0 w-full h-[350px] bg-gradient-to-b from-[#2AACE3] to-[#0078C3] z-0 rounded-b-3xl" />
+      <div className="absolute top-0 left-0 w-full h-[290px] bg-gradient-to-b from-[#2AACE3] to-[#0078C3] z-0 rounded-b-3xl" />
       <div className="container mx-auto px-4 pt-5 relative z-10">
-        <h1 className="text-2xl font-bold text-white mb-6 text-center">
-          Hasil Pencarian Penginapan
-        </h1>
         <PropertySearchForm
           defaultValues={{
             city_id: searchParams.city_id,

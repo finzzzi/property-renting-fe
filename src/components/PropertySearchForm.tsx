@@ -142,22 +142,19 @@ const PropertySearchForm = ({
   };
 
   return (
-    <Card className="w-full max-w-4xl mx-auto shadow-lg">
+    <Card className="w-full max-w-3xl mx-auto shadow-lg">
       <CardContent>
         <div className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-              <MapPinIcon className="h-4 w-4" />
-              Kota/Kabupaten
-            </label>
             <Popover open={cityPopoverOpen} onOpenChange={setCityPopoverOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   role="combobox"
                   aria-expanded={cityPopoverOpen}
-                  className="w-full justify-between"
+                  className="w-full justify-start"
                 >
+                  <MapPinIcon className="h-4 w-4 " />
                   {selectedCity
                     ? `${selectedCity.type} ${selectedCity.name}`
                     : "Pilih kota/kabupaten"}
@@ -199,10 +196,6 @@ const PropertySearchForm = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                <CalendarIcon className="h-4 w-4" />
-                Tanggal Check-in
-              </label>
               <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -212,10 +205,11 @@ const PropertySearchForm = ({
                       !checkInDate && "text-muted-foreground"
                     )}
                   >
+                    <CalendarIcon className="h-4 w-4" />
                     {checkInDate ? (
                       format(checkInDate, "PPP", { locale: id })
                     ) : (
-                      <span>Pilih tanggal</span>
+                      <span>Tanggal Check-in</span>
                     )}
                   </Button>
                 </PopoverTrigger>
@@ -245,13 +239,12 @@ const PropertySearchForm = ({
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                <ClockIcon className="h-4 w-4" />
-                Durasi Menginap
-              </label>
               <Select value={duration} onValueChange={setDuration}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Pilih durasi" />
+                  <div className="flex items-center gap-2">
+                    <ClockIcon className="h-4 w-4" />
+                    <SelectValue placeholder="Durasi" />
+                  </div>
                 </SelectTrigger>
                 <SelectContent>
                   {[1, 2, 3, 4, 5, 6, 7].map((night) => (
@@ -266,13 +259,12 @@ const PropertySearchForm = ({
 
           <div className="grid grid-cols-2 gap-4 items-end">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                <UsersIcon className="h-4 w-4" />
-                Jumlah Tamu
-              </label>
               <Select value={guests} onValueChange={setGuests}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Pilih jumlah tamu" />
+                  <div className="flex items-center gap-2">
+                    <UsersIcon className="h-4 w-4" />
+                    <SelectValue placeholder="Jumlah Tamu" />
+                  </div>
                 </SelectTrigger>
                 <SelectContent>
                   {[1, 2, 3, 4, 5].map((person) => (
@@ -287,8 +279,8 @@ const PropertySearchForm = ({
             <div className="flex justify-center">
               <Button
                 onClick={handleSearch}
-                size="lg"
-                className="w-full md:w-auto px-8 md:px-15 py-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg shadow-md"
+                size="sm"
+                className="w-full md:w-auto px-8 md:px-15 h-full py-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg shadow-md"
               >
                 Cari Penginapan
               </Button>

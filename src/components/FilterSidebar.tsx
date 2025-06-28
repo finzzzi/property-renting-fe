@@ -28,8 +28,8 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
   onApplyFilter,
 }) => {
   return (
-    <div className="lg:w-1/4">
-      <Card className="sticky top-4 py-0">
+    <div className="w-full">
+      <Card className="lg:sticky lg:top-4 py-0">
         <CardContent className="p-6">
           <div className="flex items-center mb-4">
             <Filter className="h-5 w-5 mr-2" />
@@ -38,12 +38,6 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
 
           {/* Property Name Filter */}
           <div className="mb-6">
-            <Label
-              htmlFor="property-name"
-              className="text-sm font-medium mb-2 block"
-            >
-              Nama Properti
-            </Label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
