@@ -136,36 +136,12 @@ const PropertyDetailPage = () => {
 
       {/* Main Content */}
       <div className="container mx-auto max-w-5xl px-4 py-5">
-        {/* Back to Search Button */}
-        <div className="mb-4">
-          <button
-            onClick={() => window.history.back()}
-            className="flex items-center text-gray-600 hover:text-orange-600 transition-colors"
-          >
-            <svg
-              className="w-4 h-4 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            Kembali ke Pencarian
-          </button>
-        </div>
         {/* Property Detail */}
         <PropertyDetail property={propertyData} />
 
         {/* Available Rooms */}
         <div className="mt-8" ref={roomListRef}>
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">
-            Kamar Tersedia
-          </h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Jenis Kamar</h2>
           <RoomList
             rooms={propertyData.available_rooms}
             searchParams={currentSearchParams}

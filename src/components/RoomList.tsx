@@ -109,29 +109,11 @@ const RoomList: React.FC<RoomListProps> = ({
                         </span>
                       </div>
                     </div>
-
-                    {/* Availability Info */}
-                    <div className="mb-4">
-                      {room.available_quantity > 0 ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          Tersedia
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                          Tidak Tersedia
-                        </span>
-                      )}
-                    </div>
                   </div>
 
                   {/* Price and Booking */}
                   <div className="md:text-right md:ml-6">
                     <div className="mb-4">
-                      {room.final_price !== room.price && (
-                        <div className="text-sm text-gray-500 line-through">
-                          {formatCurrency(room.price)}
-                        </div>
-                      )}
                       <div className="text-2xl font-bold text-orange-600">
                         {formatCurrency(room.final_price)}
                       </div>
