@@ -72,12 +72,12 @@ const DateRangeCalendar: React.FC<DateRangeCalendarProps> = ({
   const disabledDay = (day: Date) => {
     const key = getDateKey(day);
     const info = calendarData[key];
-    // Disable if not available or date in the past
+    // Disable hanya untuk tanggal sebelum hari ini
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     if (day < today) return true;
-    if (!info) return true;
-    return !info.is_available;
+    if (!info) return false;
+    return false;
   };
 
   const CustomDayButton = ({ children, modifiers, day, ...props }: any) => {

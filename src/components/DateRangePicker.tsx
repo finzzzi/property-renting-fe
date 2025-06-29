@@ -45,7 +45,11 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
       return `${y}-${m}-${dd}`;
     };
 
-    if (range?.from && range?.to) {
+    if (
+      range?.from &&
+      range?.to &&
+      range.from.toDateString() !== range.to.toDateString()
+    ) {
       const params = new URLSearchParams(window.location.search);
       params.set("check_in", getDateKey(range.from));
       params.set("check_out", getDateKey(range.to));
@@ -80,7 +84,11 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
         />
         <Button
           onClick={handleApply}
-          disabled={!range?.from || !range?.to}
+          disabled={
+            !range?.from ||
+            !range?.to ||
+            range.from.toDateString() === range.to?.toDateString()
+          }
           className="mt-3 w-full bg-slate-800 hover:bg-slate-900 text-white"
         >
           Terapkan
