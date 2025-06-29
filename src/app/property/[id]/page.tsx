@@ -141,7 +141,6 @@ const PropertyDetailPage = () => {
 
         {/* Available Rooms */}
         <div className="mt-8" ref={roomListRef}>
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Jenis Kamar</h2>
           <RoomList
             rooms={propertyData.available_rooms}
             searchParams={currentSearchParams}

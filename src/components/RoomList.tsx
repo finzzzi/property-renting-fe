@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, Bed } from "lucide-react";
 import { SearchParams } from "@/lib/types/search";
+import DateRangePicker from "./DateRangePicker";
 
 interface Room {
   id: number;
@@ -58,6 +59,11 @@ const RoomList: React.FC<RoomListProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Date picker button */}
+      <div className="flex justify-between">
+        <h2 className="text-2xl font-bold text-gray-900">Jenis Kamar</h2>
+        <DateRangePicker propertyId={propertyId} searchParams={searchParams} />
+      </div>
       {rooms.map((room) => (
         <Card
           key={room.id}
