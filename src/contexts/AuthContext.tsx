@@ -68,6 +68,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // Fetch user profile
         await handleUserProfile(session.user.id);
+
+        // Initial redirect check untuk owner
+        if (typeof window !== "undefined") {
+          const currentPath = window.location.pathname;
+          const excludedPaths = [
+            "/reset-password",
+            "/profile",
+            "/auth/callback",
+          ];
+          const isExcludedPath = excludedPaths.some((path) =>
+            currentPath.includes(path)
+          );
+
+          if (!isExcludedPath) {
+            try {
+              const userProfile = await fetchUserProfile(session.user.id);
+              if (userProfile?.role === "owner" && currentPath === "/") {
+                router.push("/owner");
+              }
+            } catch (error) {
+              console.error(
+                "Error checking user profile for initial redirect:",
+                error
+              );
+            }
+          }
+        }
       }
     } catch (error) {
       console.error("Error in getSession:", error);
@@ -86,13 +113,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null);
 
       if (event === "SIGNED_IN" && session?.user) {
-        await handleUserProfile(session.user.id);
+        const profile = await handleUserProfile(session.user.id);
 
         if (
           typeof window !== "undefined" &&
-          !window.location.pathname.includes("/reset-password")
+          !window.location.pathname.includes("/reset-password") &&
+          !window.location.pathname.includes("/profile")
         ) {
-          router.push("/");
+          // Redirect berdasarkan role user
+          try {
+            const userProfile = await fetchUserProfile(session.user.id);
+            if (userProfile?.role === "owner") {
+              router.push("/owner");
+            } else {
+              router.push("/");
+            }
+          } catch (error) {
+            console.error("Error fetching user profile for redirect:", error);
+            router.push("/");
+          }
         }
       } else if (event === "SIGNED_OUT") {
         setUserProfile(null);

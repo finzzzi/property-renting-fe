@@ -18,7 +18,7 @@ export default function Register() {
     fullName: "",
     role: "traveler" as "traveler" | "owner",
   });
-  const { signInWithGoogle, signInWithFacebook, user } = useAuth();
+  const { signInWithGoogle, signInWithFacebook, user, userProfile } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -26,10 +26,14 @@ export default function Register() {
   }, [activeTab]);
 
   useEffect(() => {
-    if (user) {
-      router.push("/");
+    if (user && userProfile) {
+      if (userProfile.role === "owner") {
+        router.push("/owner");
+      } else {
+        router.push("/");
+      }
     }
-  }, [user, router]);
+  }, [user, userProfile, router]);
 
   const handleGoogleSignIn = async () => {
     try {

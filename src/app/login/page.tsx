@@ -14,7 +14,7 @@ export default function Login() {
   const [slidePosition, setSlidePosition] = useState(0);
   const [isForgotPasswordModalOpen, setIsForgotPasswordModalOpen] =
     useState(false);
-  const { signInWithGoogle, signInWithFacebook, user } = useAuth();
+  const { signInWithGoogle, signInWithFacebook, user, userProfile } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -22,10 +22,14 @@ export default function Login() {
   }, [activeTab]);
 
   useEffect(() => {
-    if (user) {
-      router.push("/");
+    if (user && userProfile) {
+      if (userProfile.role === "owner") {
+        router.push("/owner");
+      } else {
+        router.push("/");
+      }
     }
-  }, [user, router]);
+  }, [user, userProfile, router]);
 
   const handleGoogleSignIn = async () => {
     try {
