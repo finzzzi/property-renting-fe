@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Building2, Plus } from "lucide-react";
+import { Building2, Plus, MoreHorizontal, Edit, Home } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,6 +15,12 @@ import {
   TableRow,
   TableCell,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import Pagination from "@/components/Pagination";
 
 interface Property {
@@ -24,6 +30,7 @@ interface Property {
   location: string;
   created_at: string;
   updated_at: string;
+  total_rooms: number;
   category: {
     id: number;
     name: string;
@@ -105,14 +112,6 @@ export default function PropertiesPage() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("id-ID", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
@@ -134,7 +133,8 @@ export default function PropertiesPage() {
               <TableHead>Nama Properti</TableHead>
               <TableHead>Kategori</TableHead>
               <TableHead>Kota/Kab</TableHead>
-              <TableHead>Terakhir Diubah</TableHead>
+              <TableHead>Jumlah Room</TableHead>
+              <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -153,7 +153,10 @@ export default function PropertiesPage() {
                   <Skeleton className="h-4 w-32" />
                 </TableCell>
                 <TableCell>
-                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-4 w-16" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-8 w-8" />
                 </TableCell>
               </TableRow>
             ))}
@@ -239,7 +242,8 @@ export default function PropertiesPage() {
                 <TableHead>Nama Properti</TableHead>
                 <TableHead>Kategori</TableHead>
                 <TableHead>Kota/Kab</TableHead>
-                <TableHead>Terakhir Diubah</TableHead>
+                <TableHead>Jumlah Room</TableHead>
+                <TableHead className="w-12"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -256,7 +260,26 @@ export default function PropertiesPage() {
                   <TableCell>{property.name}</TableCell>
                   <TableCell>{property.category.name}</TableCell>
                   <TableCell>{property.city.name}</TableCell>
-                  <TableCell>{formatDate(property.updated_at)}</TableCell>
+                  <TableCell>{property.total_rooms}</TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit Properti
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <Home className="mr-2 h-4 w-4" />
+                          Tambah Room
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
