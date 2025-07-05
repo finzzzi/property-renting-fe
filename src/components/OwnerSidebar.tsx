@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   Building2,
@@ -9,13 +9,13 @@ import {
   Settings,
   Tag,
   TrendingUp,
-} from "lucide-react"
+} from "lucide-react";
 
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible"
+} from "@/components/ui/collapsible";
 import {
   Sidebar,
   SidebarContent,
@@ -29,7 +29,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 
 // Data untuk menu sidebar
 const data = {
@@ -99,9 +99,11 @@ const data = {
       ],
     },
   ],
-}
+};
 
-export function OwnerSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function OwnerSidebar({
+  ...props
+}: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar variant="inset" {...props}>
       <SidebarHeader>
@@ -113,7 +115,9 @@ export function OwnerSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
                   <Building2 className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">Owner Dashboard</span>
+                  <span className="truncate font-semibold">
+                    Owner Dashboard
+                  </span>
                   <span className="truncate text-xs">Kelola Properti Anda</span>
                 </div>
               </a>
@@ -159,21 +163,6 @@ export function OwnerSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg">
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-muted">
-                <Settings className="size-4" />
-              </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">Pengaturan</span>
-                <span className="truncate text-xs">Kelola akun Anda</span>
-              </div>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
     </Sidebar>
-  )
-} 
+  );
+}
