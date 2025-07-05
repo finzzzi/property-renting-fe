@@ -7,6 +7,7 @@ import { Building2, Plus, MoreHorizontal, Edit, Home } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 import {
   Table,
   TableHeader,
@@ -65,6 +66,7 @@ export default function PropertiesPage() {
   const { session, loading: authLoading } = useAuth();
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const router = useRouter();
 
   useEffect(() => {
     if (session) {
@@ -116,6 +118,10 @@ export default function PropertiesPage() {
     setCurrentPage(page);
   };
 
+  const handleEditProperty = (propertyId: number) => {
+    router.push(`/tenant/properties/edit/${propertyId}`);
+  };
+
   if (authLoading || loading) {
     return (
       <div className="space-y-6">
@@ -134,7 +140,7 @@ export default function PropertiesPage() {
               <TableHead>Kategori</TableHead>
               <TableHead>Kota/Kab</TableHead>
               <TableHead>Jumlah Room</TableHead>
-              <TableHead className="w-12"></TableHead>
+              <TableHead className="w-12">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -243,7 +249,7 @@ export default function PropertiesPage() {
                 <TableHead>Kategori</TableHead>
                 <TableHead>Kota/Kab</TableHead>
                 <TableHead>Jumlah Room</TableHead>
-                <TableHead className="w-12"></TableHead>
+                <TableHead className="w-12">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -269,7 +275,9 @@ export default function PropertiesPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleEditProperty(property.id)}
+                        >
                           <Edit className="mr-2 h-4 w-4" />
                           Edit Properti
                         </DropdownMenuItem>

@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/dialog";
 import { Building2, MapPinIcon, ArrowLeft, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
@@ -62,6 +62,30 @@ interface CategoryResponse {
   total: number;
 }
 
+interface Property {
+  id: number;
+  name: string;
+  description: string;
+  location: string;
+  category_id: number;
+  city_id: number;
+  category: {
+    id: number;
+    name: string;
+  };
+  city: {
+    id: number;
+    name: string;
+    type: string;
+  };
+}
+
+interface PropertyResponse {
+  success: boolean;
+  message: string;
+  data: Property;
+}
+
 interface FormData {
   name: string;
   description: string;
@@ -70,7 +94,10 @@ interface FormData {
   city_id: string;
 }
 
-export default function AddPropertyPage() {
+export default function EditPropertyPage() {
+  const params = useParams();
+  const propertyId = params?.id as string;
+
   const [formData, setFormData] = useState<FormData>({
     name: "",
     description: "",
@@ -85,10 +112,63 @@ export default function AddPropertyPage() {
   const [loading, setLoading] = useState(false);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [citiesLoading, setCitiesLoading] = useState(true);
+  const [propertyLoading, setPropertyLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const { session, loading: authLoading } = useAuth();
   const router = useRouter();
+
+  // Fetch property data
+  useEffect(() => {
+    const fetchProperty = async () => {
+      if (!session?.access_token || !propertyId) return;
+
+      try {
+        setPropertyLoading(true);
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/properties/update/${propertyId}`,
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Gagal mengambil data properti");
+        }
+
+        const data: PropertyResponse = await response.json();
+        const property = data.data;
+
+        // Set form data
+        setFormData({
+          name: property.name,
+          description: property.description,
+          location: property.location,
+          category_id: property.category_id.toString(),
+          city_id: property.city_id.toString(),
+        });
+
+        // Set selected city
+        setSelectedCity({
+          id: property.city.id,
+          name: property.city.name,
+          type: property.city.type,
+        });
+      } catch (err) {
+        console.error("Error fetching property:", err);
+        setError("Gagal mengambil data properti");
+      } finally {
+        setPropertyLoading(false);
+      }
+    };
+
+    if (session) {
+      fetchProperty();
+    }
+  }, [session, propertyId]);
 
   // Fetch categories
   useEffect(() => {
@@ -198,9 +278,9 @@ export default function AddPropertyPage() {
       setError(null);
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/properties/create`,
+        `${process.env.NEXT_PUBLIC_API_URL}/properties/update/${propertyId}`,
         {
-          method: "POST",
+          method: "PUT",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
@@ -217,7 +297,7 @@ export default function AddPropertyPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Gagal menambahkan properti");
+        throw new Error(errorData.message || "Gagal mengupdate properti");
       }
 
       // Redirect to properties list on success
@@ -229,7 +309,7 @@ export default function AddPropertyPage() {
     }
   };
 
-  if (authLoading || categoriesLoading || citiesLoading) {
+  if (authLoading || categoriesLoading || citiesLoading || propertyLoading) {
     return (
       <div className="space-y-6">
         {/* Header Skeleton */}
@@ -309,9 +389,9 @@ export default function AddPropertyPage() {
       {/* Header */}
       <div className="flex items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Tambah Properti Baru</h1>
+          <h1 className="text-2xl font-bold">Edit Properti</h1>
           <p className="text-muted-foreground">
-            Lengkapi form berikut untuk menambahkan properti baru
+            Ubah informasi properti sesuai kebutuhan Anda
           </p>
         </div>
       </div>
@@ -455,7 +535,7 @@ export default function AddPropertyPage() {
                     Menyimpan...
                   </>
                 ) : (
-                  "Simpan Properti"
+                  "Update Properti"
                 )}
               </Button>
             </div>
@@ -467,7 +547,7 @@ export default function AddPropertyPage() {
       <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Konfirmasi Tambah Properti</DialogTitle>
+            <DialogTitle>Konfirmasi Update Properti</DialogTitle>
             <DialogDescription>
               Apakah data yang Anda masukkan sudah benar?
             </DialogDescription>
@@ -487,7 +567,7 @@ export default function AddPropertyPage() {
                   Menyimpan...
                 </>
               ) : (
-                "Ya, Simpan Properti"
+                "Ya, Update Properti"
               )}
             </Button>
           </DialogFooter>
