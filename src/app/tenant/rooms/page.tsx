@@ -3,11 +3,25 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Building2, Plus, MoreHorizontal, Edit, Home } from "lucide-react";
+import {
+  Building2,
+  Plus,
+  MoreHorizontal,
+  Edit,
+  Home,
+  Filter,
+} from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableHeader,
@@ -36,6 +50,12 @@ interface Room {
   updated_at: string;
 }
 
+interface Property {
+  id: number;
+  name: string;
+  address: string;
+}
+
 interface PaginationInfo {
   current_page: number;
   total_pages: number;
@@ -52,20 +72,75 @@ interface RoomResponse {
   pagination: PaginationInfo;
 }
 
+interface PropertyResponse {
+  success: boolean;
+  message: string;
+  data: Property[];
+}
+
 export default function RoomsPage() {
   const [rooms, setRooms] = useState<Room[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingProperties, setLoadingProperties] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { session, loading: authLoading } = useAuth();
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedProperty, setSelectedProperty] = useState<string>("all");
   const router = useRouter();
+
+  useEffect(() => {
+    if (session) {
+      fetchProperties();
+      fetchRooms(currentPage);
+    }
+  }, [session]);
+
+  useEffect(() => {
+    if (session) {
+      setCurrentPage(1); // Reset to first page when filter changes
+      fetchRooms(1);
+    }
+  }, [selectedProperty]);
 
   useEffect(() => {
     if (session) {
       fetchRooms(currentPage);
     }
-  }, [session, currentPage]);
+  }, [currentPage]);
+
+  const fetchProperties = async () => {
+    if (!session?.access_token) {
+      setLoadingProperties(false);
+      return;
+    }
+
+    try {
+      setLoadingProperties(true);
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/properties/my-properties?all=true`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Gagal mengambil data properti: ${response.status}`);
+      }
+
+      const data: PropertyResponse = await response.json();
+      setProperties(data.data);
+    } catch (err) {
+      console.error("Error fetching properties:", err);
+    } finally {
+      setLoadingProperties(false);
+    }
+  };
 
   const fetchRooms = async (page: number = 1) => {
     if (!session?.access_token) {
@@ -77,15 +152,18 @@ export default function RoomsPage() {
     try {
       setLoading(true);
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/properties/rooms/my-rooms?page=${page}&limit=10`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        }
-      );
+      // Build URL with optional property_id filter
+      let url = `${process.env.NEXT_PUBLIC_API_URL}/properties/rooms/my-rooms?page=${page}`;
+      if (selectedProperty !== "all") {
+        url += `&property_id=${selectedProperty}`;
+      }
+
+      const response = await fetch(url, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
 
       if (!response.ok) {
         if (response.status === 401) {
@@ -124,6 +202,10 @@ export default function RoomsPage() {
     router.push(`/tenant/rooms/edit/${roomId}`);
   };
 
+  const handlePropertyFilterChange = (value: string) => {
+    setSelectedProperty(value);
+  };
+
   if (authLoading || loading) {
     return (
       <div className="space-y-6">
@@ -138,8 +220,8 @@ export default function RoomsPage() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-12">No</TableHead>
-              <TableHead>Nama Properti</TableHead>
               <TableHead>Room</TableHead>
+              <TableHead>Nama Properti</TableHead>
               <TableHead>Tamu Maksimal</TableHead>
               <TableHead>Harga</TableHead>
               <TableHead>Room Quantity</TableHead>
@@ -153,10 +235,10 @@ export default function RoomsPage() {
                   <Skeleton className="h-4 w-8" />
                 </TableCell>
                 <TableCell>
-                  <Skeleton className="h-4 w-48" />
+                  <Skeleton className="h-4 w-32" />
                 </TableCell>
                 <TableCell>
-                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-4 w-48" />
                 </TableCell>
                 <TableCell>
                   <Skeleton className="h-4 w-20" />
@@ -226,6 +308,37 @@ export default function RoomsPage() {
         </Button>
       </div>
 
+      {/* Filter */}
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <label className="text-sm font-medium text-muted-foreground">
+            Filter berdasarkan properti:
+          </label>
+        </div>
+        <Select
+          value={selectedProperty}
+          onValueChange={handlePropertyFilterChange}
+        >
+          <SelectTrigger className="w-64">
+            <SelectValue placeholder="Semua properti" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Semua Properti</SelectItem>
+            {properties.map((property) => (
+              <SelectItem key={property.id} value={property.id.toString()}>
+                <div>
+                  <div className="font-medium">{property.name}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {property.address}
+                  </div>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Rooms List */}
       {rooms.length === 0 ? (
         <div className="flex items-center justify-center h-64">
@@ -249,8 +362,8 @@ export default function RoomsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12">No</TableHead>
-                <TableHead>Nama Properti</TableHead>
                 <TableHead>Room</TableHead>
+                <TableHead>Nama Properti</TableHead>
                 <TableHead>Tamu Maksimal</TableHead>
                 <TableHead>Harga</TableHead>
                 <TableHead>Room Quantity</TableHead>
@@ -268,8 +381,8 @@ export default function RoomsPage() {
                         1
                       : index + 1}
                   </TableCell>
-                  <TableCell>{room.property_name}</TableCell>
                   <TableCell>{room.name}</TableCell>
+                  <TableCell>{room.property_name}</TableCell>
                   <TableCell>{room.max_guests} orang</TableCell>
                   <TableCell>{formatPrice(room.price)}</TableCell>
                   <TableCell>{room.quantity}</TableCell>
