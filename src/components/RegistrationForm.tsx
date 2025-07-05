@@ -11,13 +11,13 @@ import {
 import { TriangleAlert } from "lucide-react";
 
 interface RegistrationFormProps {
-  type: "traveler" | "owner";
+  type: "traveler" | "tenant";
   onGoogleSignIn: () => void;
   onFacebookSignIn: () => void;
   onShowVerifyModal: (
     email: string,
     fullName: string,
-    role: "traveler" | "owner"
+    role: "traveler" | "tenant"
   ) => void;
 }
 
@@ -27,7 +27,7 @@ export default function RegistrationForm({
   onFacebookSignIn,
   onShowVerifyModal,
 }: RegistrationFormProps) {
-  const isOwner = type === "owner";
+  const isTenant = type === "tenant";
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [shouldContinueVerification, setShouldContinueVerification] =
@@ -98,7 +98,7 @@ export default function RegistrationForm({
     <div className="w-1/2 space-y-3 sm:space-y-4 px-2 sm:px-1">
       <div className="text-center p-2 rounded-lg">
         <p className="text-sm font-medium text-gray-700">
-          {isOwner
+          {isTenant
             ? "🏨 Saya punya penginapan untuk disewakan"
             : "🛌 Saya ingin mencari penginapan"}
         </p>
@@ -174,7 +174,7 @@ export default function RegistrationForm({
               >
                 {isLoading
                   ? "Mendaftar..."
-                  : `Daftar sebagai ${isOwner ? "Owner" : "Traveler"}`}
+                  : `Daftar sebagai ${isTenant ? "Tenant" : "Traveler"}`}
               </Button>
             )}
           </Form>

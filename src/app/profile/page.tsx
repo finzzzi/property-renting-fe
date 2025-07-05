@@ -126,7 +126,7 @@ export default function Profile() {
                 <div>
                   <p className="text-sm text-gray-500">Jenis Akun</p>
                   <p className="font-medium capitalize">
-                    {userProfile?.role === "traveler" ? "Traveler" : "Owner"}
+                    {userProfile?.role === "traveler" ? "Traveler" : "Tenant"}
                   </p>
                 </div>
               </div>

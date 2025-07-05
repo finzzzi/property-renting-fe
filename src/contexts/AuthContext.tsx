@@ -69,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Fetch user profile
         await handleUserProfile(session.user.id);
 
-        // Initial redirect check untuk owner
+        // Initial redirect check untuk tenant
         if (typeof window !== "undefined") {
           const currentPath = window.location.pathname;
           const excludedPaths = [
@@ -84,8 +84,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (!isExcludedPath) {
             try {
               const userProfile = await fetchUserProfile(session.user.id);
-              if (userProfile?.role === "owner" && currentPath === "/") {
-                router.push("/owner");
+              if (userProfile?.role === "tenant" && currentPath === "/") {
+                router.push("/tenant");
               }
             } catch (error) {
               console.error(
@@ -123,8 +123,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Redirect berdasarkan role user
           try {
             const userProfile = await fetchUserProfile(session.user.id);
-            if (userProfile?.role === "owner") {
-              router.push("/owner");
+            if (userProfile?.role === "tenant") {
+              router.push("/tenant");
             } else {
               router.push("/");
             }

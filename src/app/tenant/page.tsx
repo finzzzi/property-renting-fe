@@ -15,14 +15,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-export default function OwnerDashboard() {
+export default function TenantDashboard() {
   return (
     <div className="aspect-video rounded-xl bg-muted/50">
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
           <Building2 className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
           <h3 className="text-lg font-medium">
-            Selamat Datang di Dashboard Owner
+            Selamat Datang di Dashboard Tenant
           </h3>
           <p className="text-sm text-muted-foreground">
             Kelola properti dan reservasi Anda dengan mudah

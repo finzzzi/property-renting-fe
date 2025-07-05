@@ -8,7 +8,7 @@ import { loginSchema, LoginFormValues } from "@/lib/validationSchemas";
 import { TriangleAlert } from "lucide-react";
 
 interface LoginFormProps {
-  type: "traveler" | "owner";
+  type: "traveler" | "tenant";
   onGoogleSignIn: () => void;
   onFacebookSignIn: () => void;
   onForgotPasswordClick: () => void;
@@ -20,7 +20,7 @@ export default function LoginForm({
   onFacebookSignIn,
   onForgotPasswordClick,
 }: LoginFormProps) {
-  const isOwner = type === "owner";
+  const isTenant = type === "tenant";
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [isIncompleteRegistration, setIsIncompleteRegistration] =
@@ -83,7 +83,7 @@ export default function LoginForm({
       if (userRoleResult.exists && userRoleResult.role) {
         if (userRoleResult.role !== type) {
           const currentRole =
-            userRoleResult.role === "traveler" ? "traveler" : "owner";
+            userRoleResult.role === "traveler" ? "traveler" : "tenant";
           setLoginError(
             `Akun anda terdaftar sebagai ${currentRole}, silakan masuk sesuai jenis akun`
           );
@@ -155,7 +155,7 @@ export default function LoginForm({
         <>
           <div className="text-center p-2 rounded-lg">
             <p className="text-sm font-medium text-gray-700">
-              {isOwner
+              {isTenant
                 ? "🏨 Masuk sebagai pemilik properti"
                 : "🛌 Masuk sebagai pencari penginapan"}
             </p>
@@ -221,7 +221,7 @@ export default function LoginForm({
                 >
                   {isLoading
                     ? "Memproses..."
-                    : `Masuk sebagai ${isOwner ? "Owner" : "Traveler"}`}
+                    : `Masuk sebagai ${isTenant ? "Tenant" : "Traveler"}`}
                 </Button>
               </Form>
             )}

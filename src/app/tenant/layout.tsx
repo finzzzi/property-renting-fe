@@ -1,6 +1,6 @@
 "use client";
 
-import { OwnerSidebar } from "@/components/OwnerSidebar";
+import { TenantSidebar } from "@/components/TenantSidebar";
 import {
   SidebarInset,
   SidebarProvider,
@@ -16,14 +16,14 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 
-export default function OwnerLayout({
+export default function TenantLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
     <SidebarProvider>
-      <OwnerSidebar />
+      <TenantSidebar />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
           <div className="flex items-center gap-2 px-4">
@@ -32,7 +32,9 @@ export default function OwnerLayout({
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href="/owner">Dashboard Owner</BreadcrumbLink>
+                  <BreadcrumbLink href="/tenant">
+                    Dashboard Tenant
+                  </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="hidden md:block" />
                 <BreadcrumbItem>

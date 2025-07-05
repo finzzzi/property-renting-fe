@@ -11,7 +11,7 @@ interface VerifyEmailModalProps {
   onClose: () => void;
   email: string;
   fullName: string;
-  role: "traveler" | "owner";
+  role: "traveler" | "tenant";
 }
 
 export default function VerifyEmailModal({

@@ -23,8 +23,8 @@ export default function Login() {
 
   useEffect(() => {
     if (user && userProfile) {
-      if (userProfile.role === "owner") {
-        router.push("/owner");
+      if (userProfile.role === "tenant") {
+        router.push("/tenant");
       } else {
         router.push("/");
       }
@@ -76,7 +76,7 @@ export default function Login() {
               >
                 <TabsList className="grid w-full h-10 grid-cols-2">
                   <TabsTrigger value="traveler">Traveler</TabsTrigger>
-                  <TabsTrigger value="owner">Owner</TabsTrigger>
+                  <TabsTrigger value="tenant">Tenant</TabsTrigger>
                 </TabsList>
 
                 {/* Sliding Container */}
@@ -92,7 +92,7 @@ export default function Login() {
                       onForgotPasswordClick={handleForgotPasswordClick}
                     />
                     <LoginForm
-                      type="owner"
+                      type="tenant"
                       onGoogleSignIn={handleGoogleSignIn}
                       onFacebookSignIn={handleFacebookSignIn}
                       onForgotPasswordClick={handleForgotPasswordClick}

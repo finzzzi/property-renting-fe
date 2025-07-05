@@ -107,7 +107,7 @@ export const checkUserRole = async (email: string): Promise<UserRoleResult> => {
 
     return {
       exists: true,
-      role: data.role as "traveler" | "owner",
+      role: data.role as "traveler" | "tenant",
     };
   } catch (error) {
     console.error("Error checking user role:", error);

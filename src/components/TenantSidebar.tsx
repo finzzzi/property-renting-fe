@@ -42,11 +42,11 @@ const data = {
       items: [
         {
           title: "Properti Saya",
-          url: "/owner/properties",
+          url: "/tenant/properties",
         },
         {
           title: "Tambah Properti",
-          url: "/owner/properties/add",
+          url: "/tenant/properties/add",
         },
       ],
     },
@@ -57,7 +57,7 @@ const data = {
       items: [
         {
           title: "Kelola Kategori",
-          url: "/owner/categories",
+          url: "/tenant/categories",
         },
       ],
     },
@@ -68,11 +68,11 @@ const data = {
       items: [
         {
           title: "Semua Room",
-          url: "/owner/rooms",
+          url: "/tenant/rooms",
         },
         {
           title: "Tambah Room",
-          url: "/owner/rooms/add",
+          url: "/tenant/rooms/add",
         },
       ],
     },
@@ -83,7 +83,7 @@ const data = {
       items: [
         {
           title: "Pengaturan Ketersediaan",
-          url: "/owner/availability",
+          url: "/tenant/availability",
         },
       ],
     },
@@ -94,14 +94,14 @@ const data = {
       items: [
         {
           title: "Manajemen Musim Ramai",
-          url: "/owner/peak-seasons",
+          url: "/tenant/peak-seasons",
         },
       ],
     },
   ],
 };
 
-export function OwnerSidebar({
+export function TenantSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
   return (
@@ -110,13 +110,13 @@ export function OwnerSidebar({
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <a href="/owner">
+              <a href="/tenant">
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                   <Building2 className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">
-                    Owner Dashboard
+                    Tenant Dashboard
                   </span>
                   <span className="truncate text-xs">Kelola Properti Anda</span>
                 </div>

@@ -4,7 +4,7 @@ export interface UserProfile {
   id: string;
   name: string;
   email: string;
-  role?: "traveler" | "owner";
+  role?: "traveler" | "tenant";
   profile_picture?: string;
   phone?: string;
   address?: string;
@@ -20,7 +20,7 @@ export interface EmailStatusResult {
 
 export interface UserRoleResult {
   exists: boolean;
-  role?: "traveler" | "owner";
+  role?: "traveler" | "tenant";
 }
 
 export interface AuthContextType {

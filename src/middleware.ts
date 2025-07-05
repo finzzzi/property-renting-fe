@@ -67,17 +67,17 @@ export async function middleware(request: NextRequest) {
 
         const userRole = userData?.role;
 
-        // Jika user adalah owner
-        if (userRole === "owner") {
-          // Jika owner mengakses homepage, redirect ke /owner
+        // Jika user adalah tenant
+        if (userRole === "tenant") {
+          // Jika tenant mengakses homepage, redirect ke /tenant
           if (request.nextUrl.pathname === "/") {
-            return NextResponse.redirect(new URL("/owner", request.url));
+            return NextResponse.redirect(new URL("/tenant", request.url));
           }
         }
 
-        // Protect route /owner - hanya untuk owner
-        if (request.nextUrl.pathname.startsWith("/owner")) {
-          if (userRole !== "owner") {
+        // Protect route /tenant - hanya untuk tenant
+        if (request.nextUrl.pathname.startsWith("/tenant")) {
+          if (userRole !== "tenant") {
             return NextResponse.redirect(new URL("/", request.url));
           }
         }
@@ -87,8 +87,8 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Jika tidak ada user dan mengakses route /owner, redirect ke login
-  if (!user && request.nextUrl.pathname.startsWith("/owner")) {
+  // Jika tidak ada user dan mengakses route /tenant, redirect ke login
+  if (!user && request.nextUrl.pathname.startsWith("/tenant")) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
