@@ -23,7 +23,21 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Building2, Edit2, Plus, ArrowLeft, Loader2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Building2,
+  Edit2,
+  Plus,
+  ArrowLeft,
+  Loader2,
+  MoreHorizontal,
+  Trash2,
+} from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -47,7 +61,11 @@ export default function CategoriesPage() {
   const [error, setError] = useState<string | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [deletingCategory, setDeletingCategory] = useState<Category | null>(
+    null
+  );
   const [categoryName, setCategoryName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const { session, loading: authLoading } = useAuth();
@@ -200,6 +218,55 @@ export default function CategoriesPage() {
     }
   };
 
+  const handleDeleteCategory = async () => {
+    if (!session?.access_token || !deletingCategory) return;
+
+    try {
+      setSubmitting(true);
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/properties/categories/delete/${deletingCategory.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Gagal menghapus kategori");
+      }
+
+      // Refresh categories list
+      const updatedResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/properties/categories?tenant_id=${session.user.id}`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
+      if (updatedResponse.ok) {
+        const updatedData: CategoryResponse = await updatedResponse.json();
+        const userCategories = updatedData.data.filter(
+          (category) => category.tenant_id !== null
+        );
+        setCategories(userCategories);
+      }
+
+      setShowDeleteDialog(false);
+      setDeletingCategory(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const openEditDialog = (category: Category) => {
     setEditingCategory(category);
     setCategoryName(category.name);
@@ -215,6 +282,16 @@ export default function CategoriesPage() {
   const closeAddDialog = () => {
     setShowAddDialog(false);
     setCategoryName("");
+  };
+
+  const openDeleteDialog = (category: Category) => {
+    setDeletingCategory(category);
+    setShowDeleteDialog(true);
+  };
+
+  const closeDeleteDialog = () => {
+    setShowDeleteDialog(false);
+    setDeletingCategory(null);
   };
 
   if (authLoading || loading) {
@@ -371,13 +448,28 @@ export default function CategoriesPage() {
                     <TableCell className="font-medium">{index + 1}</TableCell>
                     <TableCell>{category.name}</TableCell>
                     <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEditDialog(category)}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => openEditDialog(category)}
+                          >
+                            <Edit2 className="mr-2 h-4 w-4" />
+                            Edit Kategori
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => openDeleteDialog(category)}
+                            className="text-red-600"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Hapus Kategori
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -424,6 +516,42 @@ export default function CategoriesPage() {
                 </>
               ) : (
                 "Simpan Perubahan"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Hapus Kategori</DialogTitle>
+            <DialogDescription>
+              Apakah Anda yakin ingin menghapus kategori "
+              {deletingCategory?.name}"? Tindakan ini tidak dapat dibatalkan.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={closeDeleteDialog}
+              disabled={submitting}
+            >
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteCategory}
+              disabled={submitting}
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Menghapus...
+                </>
+              ) : (
+                "Hapus Kategori"
               )}
             </Button>
           </DialogFooter>

@@ -10,6 +10,8 @@ import {
   Edit,
   Home,
   Filter,
+  Trash2,
+  Loader2,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
@@ -36,6 +38,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import Pagination from "@/components/Pagination";
 
 interface Room {
@@ -88,6 +98,9 @@ export default function RoomsPage() {
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedProperty, setSelectedProperty] = useState<string>("all");
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deletingRoom, setDeletingRoom] = useState<Room | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -204,6 +217,48 @@ export default function RoomsPage() {
 
   const handlePropertyFilterChange = (value: string) => {
     setSelectedProperty(value);
+  };
+
+  const handleDeleteRoom = async () => {
+    if (!session?.access_token || !deletingRoom) return;
+
+    try {
+      setSubmitting(true);
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/properties/rooms/delete/${deletingRoom.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Gagal menghapus room");
+      }
+
+      // Refresh rooms list
+      await fetchRooms(currentPage);
+      setShowDeleteDialog(false);
+      setDeletingRoom(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const openDeleteDialog = (room: Room) => {
+    setDeletingRoom(room);
+    setShowDeleteDialog(true);
+  };
+
+  const closeDeleteDialog = () => {
+    setShowDeleteDialog(false);
+    setDeletingRoom(null);
   };
 
   if (authLoading || loading) {
@@ -400,6 +455,13 @@ export default function RoomsPage() {
                           <Edit className="mr-2 h-4 w-4" />
                           Edit Room
                         </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => openDeleteDialog(room)}
+                          className="text-red-600"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Hapus Room
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -422,6 +484,43 @@ export default function RoomsPage() {
           )}
         </>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Hapus Room</DialogTitle>
+            <DialogDescription>
+              Apakah Anda yakin ingin menghapus room "{deletingRoom?.name}"?
+              Tindakan ini tidak dapat dibatalkan dan akan menghapus semua data
+              terkait room ini.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={closeDeleteDialog}
+              disabled={submitting}
+            >
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteRoom}
+              disabled={submitting}
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Menghapus...
+                </>
+              ) : (
+                "Hapus Room"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

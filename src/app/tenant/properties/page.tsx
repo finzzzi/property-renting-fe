@@ -3,7 +3,15 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Building2, Plus, MoreHorizontal, Edit, Home } from "lucide-react";
+import {
+  Building2,
+  Plus,
+  MoreHorizontal,
+  Edit,
+  Home,
+  Trash2,
+  Loader2,
+} from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,6 +30,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import Pagination from "@/components/Pagination";
 
 interface Property {
@@ -66,6 +82,11 @@ export default function PropertiesPage() {
   const { session, loading: authLoading } = useAuth();
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deletingProperty, setDeletingProperty] = useState<Property | null>(
+    null
+  );
+  const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -120,6 +141,48 @@ export default function PropertiesPage() {
 
   const handleEditProperty = (propertyId: number) => {
     router.push(`/tenant/properties/edit/${propertyId}`);
+  };
+
+  const handleDeleteProperty = async () => {
+    if (!session?.access_token || !deletingProperty) return;
+
+    try {
+      setSubmitting(true);
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/properties/delete/${deletingProperty.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Gagal menghapus properti");
+      }
+
+      // Refresh properties list
+      await fetchProperties(currentPage);
+      setShowDeleteDialog(false);
+      setDeletingProperty(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const openDeleteDialog = (property: Property) => {
+    setDeletingProperty(property);
+    setShowDeleteDialog(true);
+  };
+
+  const closeDeleteDialog = () => {
+    setShowDeleteDialog(false);
+    setDeletingProperty(null);
   };
 
   if (authLoading || loading) {
@@ -285,6 +348,13 @@ export default function PropertiesPage() {
                           <Home className="mr-2 h-4 w-4" />
                           Tambah Room
                         </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => openDeleteDialog(property)}
+                          className="text-red-600"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Hapus Properti
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -307,6 +377,43 @@ export default function PropertiesPage() {
           )}
         </>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Hapus Properti</DialogTitle>
+            <DialogDescription>
+              Apakah Anda yakin ingin menghapus properti "
+              {deletingProperty?.name}"? Tindakan ini tidak dapat dibatalkan dan
+              akan menghapus semua data terkait properti ini.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={closeDeleteDialog}
+              disabled={submitting}
+            >
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteProperty}
+              disabled={submitting}
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Menghapus...
+                </>
+              ) : (
+                "Hapus Properti"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
