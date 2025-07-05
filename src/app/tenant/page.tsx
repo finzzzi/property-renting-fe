@@ -1,19 +1,6 @@
 "use client";
 
-import {
-  Building2,
-  Calendar,
-  DollarSign,
-  TrendingUp,
-  Users,
-} from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Building2 } from "lucide-react";
 
 export default function TenantDashboard() {
   return (
@@ -25,7 +12,8 @@ export default function TenantDashboard() {
             Selamat Datang di Dashboard Tenant
           </h3>
           <p className="text-sm text-muted-foreground">
-            Kelola properti dan reservasi Anda dengan mudah
+            Silakan pilih menu di sebelah kiri untuk mengelola properti dan
+            reservasi
           </p>
         </div>
       </div>

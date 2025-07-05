@@ -15,12 +15,36 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
+import { usePathname } from "next/navigation";
 
 export default function TenantLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+
+  // Fungsi untuk mendapatkan breadcrumb berdasarkan path
+  const getBreadcrumb = () => {
+    const segments = pathname.split("/").filter(Boolean);
+
+    if (segments.length === 1) {
+      return "Dashboard";
+    } else if (segments[1] === "properties") {
+      return "Properti Saya";
+    } else if (segments[1] === "categories") {
+      return "Kategori";
+    } else if (segments[1] === "rooms") {
+      return "Kamar";
+    } else if (segments[1] === "availability") {
+      return "Ketersediaan";
+    } else if (segments[1] === "peak-seasons") {
+      return "Musim Ramai";
+    } else {
+      return "Dashboard";
+    }
+  };
+
   return (
     <SidebarProvider>
       <TenantSidebar />
@@ -38,7 +62,7 @@ export default function TenantLayout({
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="hidden md:block" />
                 <BreadcrumbItem>
-                  <BreadcrumbPage>Dashboard</BreadcrumbPage>
+                  <BreadcrumbPage>{getBreadcrumb()}</BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
