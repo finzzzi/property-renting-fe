@@ -330,6 +330,37 @@ export default function AddPropertyPage() {
               </div>
             )}
 
+            {/* Category */}
+            <div className="space-y-2">
+              <Label htmlFor="category">Kategori *</Label>
+              <Select
+                value={formData.category_id}
+                onValueChange={(value) =>
+                  handleInputChange("category_id", value)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih kategori properti" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem
+                      key={category.id}
+                      value={category.id.toString()}
+                    >
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground">
+                Tidak ada kategori yang sesuai?{" "}
+                <span className="text-blue-500">
+                  <Link href="/tenant/categories">Buat custom kategori</Link>
+                </span>
+              </p>
+            </div>
+
             {/* Name */}
             <div className="space-y-2">
               <Label htmlFor="name">Nama Properti *</Label>
@@ -368,31 +399,6 @@ export default function AddPropertyPage() {
                 onChange={(e) => handleInputChange("location", e.target.value)}
                 required
               />
-            </div>
-
-            {/* Category */}
-            <div className="space-y-2">
-              <Label htmlFor="category">Kategori *</Label>
-              <Select
-                value={formData.category_id}
-                onValueChange={(value) =>
-                  handleInputChange("category_id", value)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih kategori properti" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem
-                      key={category.id}
-                      value={category.id.toString()}
-                    >
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
 
             {/* City */}
