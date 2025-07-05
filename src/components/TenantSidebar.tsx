@@ -10,6 +10,7 @@ import {
   Tag,
   TrendingUp,
 } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 import {
   Collapsible,
@@ -32,78 +33,90 @@ import {
 } from "@/components/ui/sidebar";
 
 // Data untuk menu sidebar
-const data = {
-  navMain: [
-    {
-      title: "Properties",
-      url: "#",
-      icon: Building2,
-      isActive: true,
-      items: [
-        {
-          title: "Properti Saya",
-          url: "/tenant/properties",
-        },
-        {
-          title: "Tambah Properti",
-          url: "/tenant/properties/add",
-        },
-      ],
-    },
-    {
-      title: "Categories",
-      url: "#",
-      icon: Tag,
-      items: [
-        {
-          title: "Kelola Kategori",
-          url: "/tenant/categories",
-        },
-      ],
-    },
-    {
-      title: "Rooms",
-      url: "#",
-      icon: Home,
-      items: [
-        {
-          title: "Room Saya",
-          url: "/tenant/rooms",
-        },
-        {
-          title: "Tambah Room",
-          url: "/tenant/rooms/add",
-        },
-      ],
-    },
-    {
-      title: "Availability",
-      url: "#",
-      icon: Calendar,
-      items: [
-        {
-          title: "Pengaturan Ketersediaan",
-          url: "/tenant/availability",
-        },
-      ],
-    },
-    {
-      title: "Peak Seasons",
-      url: "#",
-      icon: TrendingUp,
-      items: [
-        {
-          title: "Manajemen Musim Ramai",
-          url: "/tenant/peak-seasons",
-        },
-      ],
-    },
-  ],
+const getNavData = (pathname: string) => {
+  const segments = pathname.split("/").filter(Boolean);
+  const currentSection = segments[1]; // properties, rooms, categories, etc.
+
+  return {
+    navMain: [
+      {
+        title: "Properties",
+        url: "#",
+        icon: Building2,
+        isActive: currentSection === "properties",
+        items: [
+          {
+            title: "Properti Saya",
+            url: "/tenant/properties",
+          },
+          {
+            title: "Tambah Properti",
+            url: "/tenant/properties/add",
+          },
+        ],
+      },
+      {
+        title: "Categories",
+        url: "#",
+        icon: Tag,
+        isActive: currentSection === "categories",
+        items: [
+          {
+            title: "Kelola Kategori",
+            url: "/tenant/categories",
+          },
+        ],
+      },
+      {
+        title: "Rooms",
+        url: "#",
+        icon: Home,
+        isActive: currentSection === "rooms",
+        items: [
+          {
+            title: "Room Saya",
+            url: "/tenant/rooms",
+          },
+          {
+            title: "Tambah Room",
+            url: "/tenant/rooms/add",
+          },
+        ],
+      },
+      {
+        title: "Availability",
+        url: "#",
+        icon: Calendar,
+        isActive: currentSection === "availability",
+        items: [
+          {
+            title: "Pengaturan Ketersediaan",
+            url: "/tenant/availability",
+          },
+        ],
+      },
+      {
+        title: "Peak Seasons",
+        url: "#",
+        icon: TrendingUp,
+        isActive: currentSection === "peak-seasons",
+        items: [
+          {
+            title: "Manajemen Musim Ramai",
+            url: "/tenant/peak-seasons",
+          },
+        ],
+      },
+    ],
+  };
 };
 
 export function TenantSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
+  const pathname = usePathname();
+  const data = getNavData(pathname);
+
   return (
     <Sidebar variant="inset" {...props}>
       <SidebarHeader>
