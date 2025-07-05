@@ -31,11 +31,21 @@ export default function TenantLayout({
     if (segments.length === 1) {
       return "Dashboard";
     } else if (segments[1] === "properties") {
+      if (segments[2] === "add") {
+        return "Tambah Properti";
+      } else if (segments[2] === "edit") {
+        return "Edit Properti";
+      }
       return "Properti Saya";
     } else if (segments[1] === "categories") {
       return "Kategori";
     } else if (segments[1] === "rooms") {
-      return "Kamar";
+      if (segments[2] === "add") {
+        return "Tambah Room";
+      } else if (segments[2] === "edit") {
+        return "Edit Room";
+      }
+      return "Room Saya";
     } else if (segments[1] === "availability") {
       return "Ketersediaan";
     } else if (segments[1] === "peak-seasons") {

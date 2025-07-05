@@ -24,23 +24,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Pagination from "@/components/Pagination";
 
-interface Property {
+interface Room {
   id: number;
   name: string;
-  description: string;
-  location: string;
+  price: number;
+  max_guests: number;
+  quantity: number;
+  property_id: number;
+  property_name: string;
   created_at: string;
   updated_at: string;
-  total_rooms: number;
-  category: {
-    id: number;
-    name: string;
-  };
-  city: {
-    id: number;
-    name: string;
-    type: string;
-  };
 }
 
 interface PaginationInfo {
@@ -52,15 +45,15 @@ interface PaginationInfo {
   has_previous_page: boolean;
 }
 
-interface PropertyResponse {
+interface RoomResponse {
   success: boolean;
   message: string;
-  data: Property[];
+  data: Room[];
   pagination: PaginationInfo;
 }
 
-export default function PropertiesPage() {
-  const [properties, setProperties] = useState<Property[]>([]);
+export default function RoomsPage() {
+  const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { session, loading: authLoading } = useAuth();
@@ -70,11 +63,11 @@ export default function PropertiesPage() {
 
   useEffect(() => {
     if (session) {
-      fetchProperties(currentPage);
+      fetchRooms(currentPage);
     }
   }, [session, currentPage]);
 
-  const fetchProperties = async (page: number = 1) => {
+  const fetchRooms = async (page: number = 1) => {
     if (!session?.access_token) {
       setError("Token authentikasi tidak ditemukan");
       setLoading(false);
@@ -85,7 +78,7 @@ export default function PropertiesPage() {
       setLoading(true);
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/properties/my-properties?page=${page}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/properties/rooms/my-rooms?page=${page}&limit=10`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -100,11 +93,11 @@ export default function PropertiesPage() {
             "Token tidak valid atau sudah expired. Silakan login kembali."
           );
         }
-        throw new Error(`Gagal mengambil data properti: ${response.status}`);
+        throw new Error(`Gagal mengambil data room: ${response.status}`);
       }
 
-      const data: PropertyResponse = await response.json();
-      setProperties(data.data);
+      const data: RoomResponse = await response.json();
+      setRooms(data.data);
       setPagination(data.pagination);
       setError(null);
     } catch (err) {
@@ -114,12 +107,21 @@ export default function PropertiesPage() {
     }
   };
 
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(price);
+  };
+
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
 
-  const handleEditProperty = (propertyId: number) => {
-    router.push(`/tenant/properties/edit/${propertyId}`);
+  const handleEditRoom = (roomId: number) => {
+    router.push(`/tenant/rooms/edit/${roomId}`);
   };
 
   if (authLoading || loading) {
@@ -137,10 +139,11 @@ export default function PropertiesPage() {
             <TableRow>
               <TableHead className="w-12">No</TableHead>
               <TableHead>Nama Properti</TableHead>
-              <TableHead>Kategori</TableHead>
-              <TableHead>Kota/Kab</TableHead>
-              <TableHead>Jumlah Room</TableHead>
-              <TableHead className="w-12">Aksi</TableHead>
+              <TableHead>Room</TableHead>
+              <TableHead>Tamu Maksimal</TableHead>
+              <TableHead>Harga</TableHead>
+              <TableHead>Room Quantity</TableHead>
+              <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -153,10 +156,13 @@ export default function PropertiesPage() {
                   <Skeleton className="h-4 w-48" />
                 </TableCell>
                 <TableCell>
+                  <Skeleton className="h-4 w-32" />
+                </TableCell>
+                <TableCell>
                   <Skeleton className="h-4 w-20" />
                 </TableCell>
                 <TableCell>
-                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-4 w-24" />
                 </TableCell>
                 <TableCell>
                   <Skeleton className="h-4 w-16" />
@@ -196,9 +202,7 @@ export default function PropertiesPage() {
           <Building2 className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
           <h3 className="text-lg font-medium mb-2">Terjadi Kesalahan</h3>
           <p className="text-muted-foreground mb-4">{error}</p>
-          <Button onClick={() => fetchProperties(currentPage)}>
-            Coba Lagi
-          </Button>
+          <Button onClick={() => fetchRooms(currentPage)}>Coba Lagi</Button>
         </div>
       </div>
     );
@@ -209,32 +213,32 @@ export default function PropertiesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Properti Saya</h1>
+          <h1 className="text-2xl font-bold">Room Saya</h1>
           <p className="text-muted-foreground">
-            Kelola semua properti yang Anda miliki
+            Kelola semua room yang Anda miliki
           </p>
         </div>
         <Button asChild>
-          <Link href="/tenant/properties/add">
+          <Link href="/tenant/rooms/add">
             <Plus className="mr-2 h-4 w-4" />
-            Tambah Properti
+            Tambah Room
           </Link>
         </Button>
       </div>
 
-      {/* Properties List */}
-      {properties.length === 0 ? (
+      {/* Rooms List */}
+      {rooms.length === 0 ? (
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <Building2 className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
-            <h3 className="text-lg font-medium mb-2">Belum Ada Properti</h3>
+            <h3 className="text-lg font-medium mb-2">Belum Ada Room</h3>
             <p className="text-muted-foreground mb-4">
-              Tambahkan properti pertama Anda untuk memulai
+              Tambahkan room pertama Anda untuk memulai
             </p>
             <Button asChild>
-              <Link href="/tenant/properties/add">
+              <Link href="/tenant/rooms/add">
                 <Plus className="mr-2 h-4 w-4" />
-                Tambah Properti
+                Tambah Room
               </Link>
             </Button>
           </div>
@@ -246,15 +250,16 @@ export default function PropertiesPage() {
               <TableRow>
                 <TableHead className="w-12">No</TableHead>
                 <TableHead>Nama Properti</TableHead>
-                <TableHead>Kategori</TableHead>
-                <TableHead>Kota/Kab</TableHead>
-                <TableHead>Jumlah Room</TableHead>
-                <TableHead className="w-12">Aksi</TableHead>
+                <TableHead>Room</TableHead>
+                <TableHead>Tamu Maksimal</TableHead>
+                <TableHead>Harga</TableHead>
+                <TableHead>Room Quantity</TableHead>
+                <TableHead className="w-12"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {properties.map((property, index) => (
-                <TableRow key={property.id}>
+              {rooms.map((room, index) => (
+                <TableRow key={room.id}>
                   <TableCell>
                     {pagination
                       ? pagination.items_per_page *
@@ -263,10 +268,11 @@ export default function PropertiesPage() {
                         1
                       : index + 1}
                   </TableCell>
-                  <TableCell>{property.name}</TableCell>
-                  <TableCell>{property.category.name}</TableCell>
-                  <TableCell>{property.city.name}</TableCell>
-                  <TableCell>{property.total_rooms}</TableCell>
+                  <TableCell>{room.property_name}</TableCell>
+                  <TableCell>{room.name}</TableCell>
+                  <TableCell>{room.max_guests} orang</TableCell>
+                  <TableCell>{formatPrice(room.price)}</TableCell>
+                  <TableCell>{room.quantity}</TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -276,14 +282,10 @@ export default function PropertiesPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
-                          onClick={() => handleEditProperty(property.id)}
+                          onClick={() => handleEditRoom(room.id)}
                         >
                           <Edit className="mr-2 h-4 w-4" />
-                          Edit Properti
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Home className="mr-2 h-4 w-4" />
-                          Tambah Room
+                          Edit Room
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

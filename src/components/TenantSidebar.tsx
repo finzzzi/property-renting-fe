@@ -67,7 +67,7 @@ const data = {
       icon: Home,
       items: [
         {
-          title: "Semua Room",
+          title: "Room Saya",
           url: "/tenant/rooms",
         },
         {
