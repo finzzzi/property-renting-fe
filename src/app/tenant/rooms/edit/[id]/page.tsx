@@ -7,13 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -25,18 +18,25 @@ import { ArrowLeft, Save, Building2, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 
-interface Property {
+interface Room {
   id: number;
   name: string;
-  address: string;
+  description: string;
+  price: number;
+  max_guests: number;
+  quantity: number;
+  property_id: number;
+  property_name: string;
+  created_at: string;
+  updated_at: string;
 }
 
-interface PropertyResponse {
+interface RoomResponse {
   success: boolean;
   message: string;
-  data: Property[];
+  data: Room;
 }
 
 interface RoomFormData {
@@ -45,17 +45,18 @@ interface RoomFormData {
   price: string;
   max_guests: string;
   quantity: string;
-  property_id: string;
 }
 
-export default function AddRoomPage() {
-  const [properties, setProperties] = useState<Property[]>([]);
+export default function EditRoomPage() {
+  const [room, setRoom] = useState<Room | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const { session, loading: authLoading } = useAuth();
   const router = useRouter();
+  const params = useParams();
+  const roomId = params.id as string;
 
   const [formData, setFormData] = useState<RoomFormData>({
     name: "",
@@ -63,18 +64,17 @@ export default function AddRoomPage() {
     price: "",
     max_guests: "",
     quantity: "",
-    property_id: "",
   });
 
   const [formErrors, setFormErrors] = useState<Partial<RoomFormData>>({});
 
   useEffect(() => {
-    if (session) {
-      fetchProperties();
+    if (session && roomId) {
+      fetchRoomData();
     }
-  }, [session]);
+  }, [session, roomId]);
 
-  const fetchProperties = async () => {
+  const fetchRoomData = async () => {
     if (!session?.access_token) {
       setError("Token authentikasi tidak ditemukan");
       setLoading(false);
@@ -85,7 +85,7 @@ export default function AddRoomPage() {
       setLoading(true);
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/properties/my-properties?all=true`,
+        `${process.env.NEXT_PUBLIC_API_URL}/properties/rooms/update/${roomId}`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -100,11 +100,23 @@ export default function AddRoomPage() {
             "Token tidak valid atau sudah expired. Silakan login kembali."
           );
         }
-        throw new Error(`Gagal mengambil data properti: ${response.status}`);
+        if (response.status === 404) {
+          throw new Error("Room tidak ditemukan");
+        }
+        throw new Error(`Gagal mengambil data room: ${response.status}`);
       }
 
-      const data: PropertyResponse = await response.json();
-      setProperties(data.data);
+      const data: RoomResponse = await response.json();
+      const roomData = data.data;
+
+      setRoom(roomData);
+      setFormData({
+        name: roomData.name,
+        description: roomData.description,
+        price: roomData.price.toString(),
+        max_guests: roomData.max_guests.toString(),
+        quantity: roomData.quantity.toString(),
+      });
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Terjadi kesalahan");
@@ -134,10 +146,6 @@ export default function AddRoomPage() {
 
     if (!formData.quantity || parseInt(formData.quantity) <= 0) {
       errors.quantity = "Jumlah room harus lebih dari 0";
-    }
-
-    if (!formData.property_id) {
-      errors.property_id = "Properti wajib dipilih";
     }
 
     setFormErrors(errors);
@@ -194,13 +202,12 @@ export default function AddRoomPage() {
         price: parseFloat(formData.price),
         max_guests: parseInt(formData.max_guests),
         quantity: parseInt(formData.quantity),
-        property_id: parseInt(formData.property_id),
       };
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/properties/rooms/create`,
+        `${process.env.NEXT_PUBLIC_API_URL}/properties/rooms/update/${roomId}`,
         {
-          method: "POST",
+          method: "PUT",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
@@ -217,7 +224,7 @@ export default function AddRoomPage() {
         }
         const errorData = await response.json();
         throw new Error(
-          errorData.message || `Gagal membuat room: ${response.status}`
+          errorData.message || `Gagal mengupdate room: ${response.status}`
         );
       }
 
@@ -272,7 +279,7 @@ export default function AddRoomPage() {
             <Skeleton className="h-6 w-32" />
           </CardHeader>
           <CardContent className="space-y-4">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
+            {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="space-y-2">
                 <Skeleton className="h-4 w-24" />
                 <Skeleton className="h-10 w-full" />
@@ -301,14 +308,19 @@ export default function AddRoomPage() {
     );
   }
 
-  if (error && properties.length === 0) {
+  if (error) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <Building2 className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
           <h3 className="text-lg font-medium mb-2">Terjadi Kesalahan</h3>
           <p className="text-muted-foreground mb-4">{error}</p>
-          <Button onClick={() => fetchProperties()}>Coba Lagi</Button>
+          <div className="space-x-2">
+            <Button onClick={() => fetchRoomData()}>Coba Lagi</Button>
+            <Button variant="outline" asChild>
+              <Link href="/tenant/rooms">Kembali ke Daftar Room</Link>
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -324,9 +336,9 @@ export default function AddRoomPage() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">Tambah Room Baru</h1>
+          <h1 className="text-2xl font-bold">Edit Room</h1>
           <p className="text-muted-foreground">
-            Buat room baru untuk properti Anda
+            Update informasi room {room?.name} - {room?.property_name}
           </p>
         </div>
       </div>
@@ -338,41 +350,6 @@ export default function AddRoomPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Property Selection */}
-            <div className="space-y-2">
-              <Label htmlFor="property_id">
-                Properti <span className="text-red-500">*</span>
-              </Label>
-              <Select
-                value={formData.property_id}
-                onValueChange={(value) =>
-                  handleInputChange("property_id", value)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih properti" />
-                </SelectTrigger>
-                <SelectContent>
-                  {properties.map((property) => (
-                    <SelectItem
-                      key={property.id}
-                      value={property.id.toString()}
-                    >
-                      <div>
-                        <div className="font-medium">{property.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {property.address}
-                        </div>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {formErrors.property_id && (
-                <p className="text-sm text-red-500">{formErrors.property_id}</p>
-              )}
-            </div>
-
             {/* Room Name */}
             <div className="space-y-2">
               <Label htmlFor="name">
@@ -488,10 +465,10 @@ export default function AddRoomPage() {
                 {submitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Menyimpan...
+                    Mengupdate...
                   </>
                 ) : (
-                  "Simpan Room"
+                  "Update Room"
                 )}
               </Button>
             </div>
@@ -503,7 +480,7 @@ export default function AddRoomPage() {
       <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Konfirmasi Tambah Room</DialogTitle>
+            <DialogTitle>Konfirmasi Update Room</DialogTitle>
             <DialogDescription>
               Apakah data yang Anda masukkan sudah benar?
             </DialogDescription>
@@ -520,10 +497,10 @@ export default function AddRoomPage() {
               {submitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Menyimpan...
+                  Mengupdate...
                 </>
               ) : (
-                "Ya, Simpan Room"
+                "Ya, Update Room"
               )}
             </Button>
           </DialogFooter>
