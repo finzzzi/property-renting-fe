@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -175,7 +176,7 @@ export default function AddPropertyPage() {
       setError(null);
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/properties`,
+        `${process.env.NEXT_PUBLIC_API_URL}/properties/create`,
         {
           method: "POST",
           headers: {
@@ -208,11 +209,58 @@ export default function AddPropertyPage() {
 
   if (authLoading || categoriesLoading || citiesLoading) {
     return (
-      <div className="flex items-center justify-center min-h-64">
-        <div className="text-center">
-          <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground mb-2" />
-          <p className="text-muted-foreground">Memuat data...</p>
+      <div className="space-y-6">
+        {/* Header Skeleton */}
+        <div className="flex items-center gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-4 w-96" />
+          </div>
         </div>
+
+        {/* Form Skeleton */}
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-48" />
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Name field */}
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+
+            {/* Description field */}
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+
+            {/* Location field */}
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+
+            {/* Category field */}
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+
+            {/* City field */}
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+
+            {/* Submit buttons */}
+            <div className="flex justify-end space-x-4">
+              <Skeleton className="h-10 w-16" />
+              <Skeleton className="h-10 w-32" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
