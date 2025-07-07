@@ -52,7 +52,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
             <Image
               src={
                 property.property_pictures
-                  ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/property-image//${property.property_pictures}`
+                  ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/property-pictures//${property.property_pictures}`
                   : "/placeholder-property.jpg"
               }
               alt={property.name}

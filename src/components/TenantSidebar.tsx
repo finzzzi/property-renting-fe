@@ -5,6 +5,7 @@ import {
   Calendar,
   ChevronRight,
   Home,
+  Image,
   Plus,
   Settings,
   Tag,
@@ -80,6 +81,22 @@ const getNavData = (pathname: string) => {
           {
             title: "Tambah Room",
             url: "/tenant/rooms/add",
+          },
+        ],
+      },
+      {
+        title: "Gallery",
+        url: "#",
+        icon: Image,
+        isActive: currentSection === "gallery",
+        items: [
+          {
+            title: "Kelola Foto Properti",
+            url: "/tenant/gallery/properties",
+          },
+          {
+            title: "Kelola Foto Room",
+            url: "/tenant/gallery/rooms",
           },
         ],
       },

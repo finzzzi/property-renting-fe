@@ -29,7 +29,7 @@ interface PropertyDetailProps {
 const PropertyDetail: React.FC<PropertyDetailProps> = ({ property }) => {
   const mainPicture = property.property_pictures.find((pic) => pic.is_main);
   const imageUrl = mainPicture
-    ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/property-image//${mainPicture.file_path}`
+    ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/property-pictures//${mainPicture.file_path}`
     : "/placeholder-property.jpg";
 
   return (
@@ -64,7 +64,7 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ property }) => {
               .map((picture) => (
                 <div key={picture.id} className="relative h-24 md:h-32">
                   <Image
-                    src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/property-image//${picture.file_path}`}
+                    src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/property-pictures//${picture.file_path}`}
                     alt={`${property.name} - Foto ${picture.id}`}
                     fill
                     className="object-cover rounded-lg"
