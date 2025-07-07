@@ -53,7 +53,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
               src={
                 property.property_pictures
                   ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/property-pictures//${property.property_pictures}`
-                  : "/placeholder-property.jpg"
+                  : `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/property-pictures//placeholder.png`
               }
               alt={property.name}
               fill

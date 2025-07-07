@@ -74,7 +74,11 @@ const RoomList: React.FC<RoomListProps> = ({
             <div className="md:w-1/3">
               <div className="h-48 md:h-full overflow-hidden relative">
                 <Image
-                  src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/room-image//${room.picture}`}
+                  src={
+                    room.picture
+                      ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/room-image//${room.picture}`
+                      : `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/property-pictures//placeholder.png`
+                  }
                   alt={room.name}
                   fill
                   className="object-cover"

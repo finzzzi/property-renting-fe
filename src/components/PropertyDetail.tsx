@@ -30,7 +30,7 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ property }) => {
   const mainPicture = property.property_pictures.find((pic) => pic.is_main);
   const imageUrl = mainPicture
     ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/property-pictures//${mainPicture.file_path}`
-    : "/placeholder-property.jpg";
+    : `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/property-pictures//placeholder.png`;
 
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow py-0 gap-0">
