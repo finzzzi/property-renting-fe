@@ -67,6 +67,7 @@ export default function AddPropertyPicturePage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const { session, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -289,18 +290,24 @@ export default function AddPropertyPicturePage() {
 
       const data: UploadResponse = await response.json();
 
-      // Cleanup preview URL
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-      }
-
-      // Redirect to gallery page
-      router.push("/tenant/gallery/properties");
+      // Show success dialog
+      setShowSuccessDialog(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Terjadi kesalahan");
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSuccessDialogClose = () => {
+    // Cleanup preview URL
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+
+    // Close dialog and redirect to gallery page
+    setShowSuccessDialog(false);
+    router.push("/tenant/gallery/properties");
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -561,6 +568,23 @@ export default function AddPropertyPicturePage() {
             <Button onClick={handleConfirmSubmit}>
               <Check className="mr-2 h-4 w-4" />
               Ya, Upload
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Success Dialog */}
+      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-primary">
+              <Check className="h-5 w-5" />
+              Upload Berhasil!
+            </DialogTitle>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={handleSuccessDialogClose} className="w-full">
+              Kembali ke Galeri
             </Button>
           </DialogFooter>
         </DialogContent>
