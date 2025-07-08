@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Filter, Search } from "lucide-react";
 import { CategoryWithCount } from "@/lib/types/search";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface FilterSidebarProps {
   propertyNameFilter: string;
@@ -83,11 +84,15 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
                     </Label>
                   </div>
                 ))
+              ) : loading ? (
+                <div className="space-y-2">
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-4 w-full" />
+                  ))}
+                </div>
               ) : (
                 <div className="text-sm text-gray-500">
-                  {loading
-                    ? "Memuat kategori..."
-                    : "Tidak ada kategori tersedia"}
+                  Tidak ada kategori tersedia
                 </div>
               )}
             </div>

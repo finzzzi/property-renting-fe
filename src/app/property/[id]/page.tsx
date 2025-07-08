@@ -6,6 +6,7 @@ import SearchHeader from "@/components/SearchHeader";
 import PropertyDetail from "@/components/PropertyDetail";
 import RoomList from "@/components/RoomList";
 import { SearchParams } from "@/lib/types/search";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface PropertyData {
   property_id: number;
@@ -93,10 +94,21 @@ const PropertyDetailPage = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <SearchHeader searchParams={currentSearchParams} />
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex justify-center items-center h-64">
-            <div className="text-lg">Memuat detail property...</div>
+        <div className="container mx-auto max-w-5xl px-4 py-8 space-y-6">
+          {/* Property image skeleton */}
+          <Skeleton className="h-64 w-full rounded-lg" />
+
+          {/* Title skeleton */}
+          <Skeleton className="h-8 w-2/3" />
+
+          {/* Description skeleton */}
+          <Skeleton className="h-4 w-1/2" />
+
+          {/* Rooms list skeleton */}
+          <div className="space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-32 w-full" />
+            ))}
           </div>
         </div>
       </div>
@@ -106,7 +118,6 @@ const PropertyDetailPage = () => {
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <SearchHeader searchParams={currentSearchParams} />
         <div className="container mx-auto px-4 py-8">
           <div className="flex justify-center items-center h-64">
             <div className="text-lg text-red-600">Error: {error}</div>
@@ -119,7 +130,6 @@ const PropertyDetailPage = () => {
   if (!propertyData) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <SearchHeader searchParams={currentSearchParams} />
         <div className="container mx-auto px-4 py-8">
           <div className="flex justify-center items-center h-64">
             <div className="text-lg">Property tidak ditemukan</div>

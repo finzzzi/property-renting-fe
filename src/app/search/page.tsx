@@ -9,6 +9,7 @@ import { usePropertySearch } from "@/hooks/usePropertySearch";
 import { SearchParams } from "@/lib/types/search";
 import { Button } from "@/components/ui/button";
 import { Filter } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Komponen terpisah yang menggunakan useSearchParams
 const SearchContent = () => {
@@ -114,20 +115,24 @@ const SearchContent = () => {
 const SearchPageLoading = () => {
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        <div className="animate-pulse">
-          <div className="h-12 bg-gray-200 rounded mb-6"></div>
-          <div className="flex flex-col lg:flex-row gap-6">
-            <div className="w-full lg:w-1/4">
-              <div className="h-96 bg-gray-200 rounded"></div>
-            </div>
-            <div className="w-full lg:w-3/4">
-              <div className="space-y-4">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="h-32 bg-gray-200 rounded"></div>
-                ))}
-              </div>
-            </div>
+      <div className="container mx-auto px-4 py-8 space-y-6">
+        {/* Header skeleton */}
+        <Skeleton className="h-12 w-full rounded-md" />
+
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Sidebar skeleton */}
+          <div className="w-full lg:w-1/4 space-y-4">
+            <Skeleton className="h-6 w-32" />
+            {[...Array(5)].map((_, i) => (
+              <Skeleton key={i} className="h-4 w-full" />
+            ))}
+          </div>
+
+          {/* Property list skeleton */}
+          <div className="w-full lg:w-3/4 space-y-6">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-32 w-full" />
+            ))}
           </div>
         </div>
       </div>

@@ -5,6 +5,7 @@ import PropertyCard from "@/components/PropertyCard";
 import SortSelector from "@/components/SortSelector";
 import Pagination from "@/components/Pagination";
 import { Property, SearchParams, SearchResponse } from "@/lib/types/search";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface PropertyListProps {
   properties: Property[];
@@ -45,11 +46,10 @@ const PropertyList: React.FC<PropertyListProps> = ({
 
       {/* Loading State */}
       {loading && (
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600">
-            Mencari penginapan terbaik untuk Anda...
-          </p>
+        <div className="space-y-6">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-32 w-full" />
+          ))}
         </div>
       )}
 
