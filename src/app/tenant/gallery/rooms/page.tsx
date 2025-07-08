@@ -3,10 +3,25 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { MoreHorizontal, Upload, Trash2, Camera, Filter } from "lucide-react";
+import {
+  MoreHorizontal,
+  Upload,
+  Trash2,
+  Camera,
+  Filter,
+  Loader2,
+} from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, useSearchParams } from "next/navigation";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -40,7 +55,7 @@ interface RoomPicture {
 interface RoomWithPictures {
   id: number;
   name: string;
-  max_guests: number;
+  description: string;
   property_id: number;
   property: {
     id: number;
@@ -49,7 +64,7 @@ interface RoomWithPictures {
   };
   pictures: RoomPicture[];
   has_pictures: boolean;
-  picture_count: number;
+  picture_count?: number;
 }
 
 interface Property {
@@ -89,6 +104,11 @@ export default function RoomGalleryPage() {
   const [loadingProperties, setLoadingProperties] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [emptyMessage, setEmptyMessage] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [roomToDelete, setRoomToDelete] = useState<RoomWithPictures | null>(
+    null
+  );
+  const [deleting, setDeleting] = useState(false);
   const { session, loading: authLoading } = useAuth();
   const [selectedProperty, setSelectedProperty] = useState<string>("");
   const router = useRouter();
@@ -208,6 +228,76 @@ export default function RoomGalleryPage() {
     setRooms([]); // Reset rooms when changing property
     setError(null); // Clear any previous errors
     setEmptyMessage(null); // Clear empty message
+  };
+
+  const handleDeleteClick = (room: RoomWithPictures) => {
+    setRoomToDelete(room);
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (
+      !roomToDelete ||
+      !session?.access_token ||
+      roomToDelete.pictures.length === 0
+    ) {
+      return;
+    }
+
+    try {
+      setDeleting(true);
+
+      const pictureId = roomToDelete.pictures[0].id;
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/pictures/room/${pictureId}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error(
+            "Token tidak valid atau sudah expired. Silakan login kembali."
+          );
+        }
+        const errorData = await response.json();
+        throw new Error(
+          errorData.message || `Gagal menghapus foto: ${response.status}`
+        );
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.message || "Gagal menghapus foto");
+      }
+
+      // Update rooms state to reflect deletion
+      setRooms((prevRooms) =>
+        prevRooms.map((room) =>
+          room.id === roomToDelete.id
+            ? {
+                ...room,
+                pictures: [],
+                has_pictures: false,
+                picture_count: 0,
+              }
+            : room
+        )
+      );
+
+      setShowDeleteDialog(false);
+      setRoomToDelete(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const getDisplayPicture = (room: RoomWithPictures) => {
@@ -410,7 +500,7 @@ export default function RoomGalleryPage() {
                       <div>
                         <div className="font-medium">{room.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          Max {room.max_guests} tamu
+                          {room.description}
                         </div>
                       </div>
                     </TableCell>
@@ -453,8 +543,17 @@ export default function RoomGalleryPage() {
                             Upload Foto
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            disabled
-                            className="text-muted-foreground"
+                            disabled={!hasRoomPicture(room)}
+                            onClick={() => {
+                              if (hasRoomPicture(room)) {
+                                handleDeleteClick(room);
+                              }
+                            }}
+                            className={
+                              !hasRoomPicture(room)
+                                ? "text-muted-foreground"
+                                : "text-red-600"
+                            }
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
                             Hapus Foto
@@ -469,6 +568,46 @@ export default function RoomGalleryPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Konfirmasi Hapus Foto</DialogTitle>
+            <DialogDescription>
+              Apakah Anda yakin ingin menghapus foto untuk room{" "}
+              <strong>{roomToDelete?.name}</strong>? Tindakan ini tidak dapat
+              dibatalkan.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+              disabled={deleting}
+            >
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Menghapus...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Hapus Foto
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
