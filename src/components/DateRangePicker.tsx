@@ -37,6 +37,12 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
 
   const router = useRouter();
 
+  const formatDate = (d: Date) =>
+    d.toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "long",
+    });
+
   const handleApply = () => {
     const getDateKey = (d: Date) => {
       const y = d.getFullYear();
@@ -82,6 +88,12 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
           value={range}
           onChange={setRange}
         />
+        {range?.from && range?.to && (
+          <div className="mt-2 text-sm font-medium text-center">
+            Check-in {formatDate(range.from)} <span className="mx-2">|</span>{" "}
+            Check-out {formatDate(range.to)}
+          </div>
+        )}
         <Button
           onClick={handleApply}
           disabled={
