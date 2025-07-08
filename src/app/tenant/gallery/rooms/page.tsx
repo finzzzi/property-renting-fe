@@ -3,19 +3,10 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Plus,
-  MoreHorizontal,
-  Upload,
-  Trash2,
-  Loader2,
-  Camera,
-  Filter,
-} from "lucide-react";
+import { MoreHorizontal, Upload, Trash2, Camera, Filter } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Select,
   SelectContent,
@@ -101,12 +92,21 @@ export default function RoomGalleryPage() {
   const { session, loading: authLoading } = useAuth();
   const [selectedProperty, setSelectedProperty] = useState<string>("");
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     if (session) {
       fetchProperties();
     }
   }, [session]);
+
+  // Set initial property from URL parameter
+  useEffect(() => {
+    const propertyParam = searchParams.get("property");
+    if (propertyParam && !selectedProperty) {
+      setSelectedProperty(propertyParam);
+    }
+  }, [searchParams, selectedProperty]);
 
   useEffect(() => {
     if (session && selectedProperty) {
@@ -282,10 +282,6 @@ export default function RoomGalleryPage() {
               Kelola foto-foto room properti Anda
             </p>
           </div>
-          <Button disabled>
-            <Plus className="mr-2 h-4 w-4" />
-            Tambah Foto Room
-          </Button>
         </div>
         <Card>
           <CardContent className="p-6">
@@ -315,10 +311,6 @@ export default function RoomGalleryPage() {
             Kelola foto-foto room properti Anda
           </p>
         </div>
-        <Button disabled>
-          <Plus className="mr-2 h-4 w-4" />
-          Tambah Foto Room
-        </Button>
       </div>
 
       {/* Filter */}
@@ -432,8 +424,30 @@ export default function RoomGalleryPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
-                            disabled
-                            className="text-muted-foreground"
+                            disabled={hasRoomPicture(room)}
+                            onClick={() => {
+                              if (!hasRoomPicture(room)) {
+                                const selectedPropertyData = properties.find(
+                                  (p) => p.id.toString() === selectedProperty
+                                );
+                                const params = new URLSearchParams({
+                                  roomName: room.name,
+                                  propertyName:
+                                    selectedPropertyData?.name || "Properti",
+                                  propertyId: selectedProperty,
+                                });
+                                router.push(
+                                  `/tenant/gallery/rooms/upload/${
+                                    room.id
+                                  }?${params.toString()}`
+                                );
+                              }
+                            }}
+                            className={
+                              hasRoomPicture(room)
+                                ? "text-muted-foreground"
+                                : ""
+                            }
                           >
                             <Upload className="mr-2 h-4 w-4" />
                             Upload Foto
