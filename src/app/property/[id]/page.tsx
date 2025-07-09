@@ -43,14 +43,31 @@ const PropertyDetailPage = () => {
   };
 
   useEffect(() => {
+    // Helper untuk menggeser tanggal ke belakang/ke depan sejumlah hari tertentu
+    const shiftDate = (dateStr: string, days: number) => {
+      if (!dateStr) return "";
+      const date = new Date(dateStr);
+      // Geser tanggal berdasarkan zona waktu lokal
+      date.setDate(date.getDate() + days);
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    };
+
     const fetchPropertyDetail = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        const checkIn = currentSearchParams.check_in;
-        const checkOut = currentSearchParams.check_out;
+        // Ambil original tanggal dari query string
+        const checkInOriginal = currentSearchParams.check_in;
+        const checkOutOriginal = currentSearchParams.check_out;
         const guests = currentSearchParams.guests;
+
+        // Sesuaikan tanggal (-1 hari) untuk menutupi kesalahan input DB
+        const checkIn = shiftDate(checkInOriginal, -1);
+        const checkOut = shiftDate(checkOutOriginal, -1);
 
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/properties/detail?property_id=${propertyId}&check_in=${checkIn}&check_out=${checkOut}&guests=${guests}`
