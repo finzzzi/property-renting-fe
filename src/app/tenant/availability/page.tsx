@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Building2, Filter, Plus, Trash2, Loader2 } from "lucide-react";
+import {
+  Building2,
+  Filter,
+  Plus,
+  Trash2,
+  Loader2,
+  MoreHorizontal,
+} from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Select,
@@ -27,6 +34,12 @@ import {
   TableRow,
   TableCell,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { Calendar } from "@/components/ui/calendar";
 import { DateRange } from "react-day-picker";
 
@@ -281,7 +294,7 @@ export default function AvailabilityPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
+        <div className="mr-2 sm:mr-10">
           <h1 className="text-2xl font-bold">Ketersediaan Room</h1>
           <p className="text-muted-foreground">
             Tambahkan pengaturan unavailability untuk menjadikan kamar tidak
@@ -294,7 +307,7 @@ export default function AvailabilityPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col md:flex-row md:items-center gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center gap-4">
         {/* Property filter */}
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-muted-foreground" />
@@ -350,86 +363,101 @@ export default function AvailabilityPage() {
         )}
       </div>
 
-      {/* Calendar */}
-      {loadingData ? (
-        <div className="flex justify-center py-16">
-          <Loader2 className="animate-spin" />
+      {/* Kalender & Tabel (berdampingan pada layar lg ke atas) */}
+      <div className="flex flex-col lg:flex-row lg:gap-8">
+        {/* Bagian Kalender */}
+        <div className="lg:w-1/3">
+          {loadingData ? (
+            <div className="flex justify-center py-16">
+              <Loader2 className="animate-spin" />
+            </div>
+          ) : selectedRoom ? (
+            <Calendar
+              className="mx-auto"
+              month={month}
+              onMonthChange={(m) => setMonth(m)}
+              numberOfMonths={1}
+              showOutsideDays
+              modifiers={{ unavailable: unavailableDates }}
+              modifiersClassNames={{ unavailable: "bg-red-400 text-white" }}
+              captionLayout="dropdown"
+            />
+          ) : (
+            <div className="text-center text-muted-foreground py-8">
+              Silakan pilih properti dan room terlebih dahulu
+            </div>
+          )}
         </div>
-      ) : selectedRoom ? (
-        <Calendar
-          className="mx-auto w-full max-w-md"
-          month={month}
-          onMonthChange={(m) => setMonth(m)}
-          numberOfMonths={1}
-          showOutsideDays
-          modifiers={{ unavailable: unavailableDates }}
-          modifiersClassNames={{ unavailable: "bg-red-400 text-white" }}
-          captionLayout="dropdown"
-        />
-      ) : (
-        <div className="text-center text-muted-foreground py-8">
-          Silakan pilih properti dan room terlebih dahulu
-        </div>
-      )}
 
-      {/* List Unavailabilities */}
-      {selectedRoom && !loadingData && (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>No</TableHead>
-              <TableHead>Tidak Tersedia Mulai</TableHead>
-              <TableHead>Sampai</TableHead>
-              <TableHead></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {unavailabilities.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={4}
-                  className="text-center text-muted-foreground py-6"
-                >
-                  Tidak ada pengaturan unavailability untuk bulan{" "}
-                  {month.toLocaleDateString("id-ID", {
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </TableCell>
-              </TableRow>
-            ) : (
-              unavailabilities.map((u, idx) => (
-                <TableRow key={u.id}>
-                  <TableCell>{idx + 1}</TableCell>
-                  <TableCell>
-                    {new Date(u.start_date).toLocaleDateString("id-ID", {
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric",
-                    })}
-                  </TableCell>
-                  <TableCell>
-                    {new Date(u.end_date).toLocaleDateString("id-ID", {
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric",
-                    })}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setDeleteTarget(u)}
-                    >
-                      <Trash2 className="h-4 w-4 text-red-600" />
-                    </Button>
-                  </TableCell>
+        {/* Bagian Tabel */}
+        {selectedRoom && !loadingData && (
+          <div className="lg:w-2/3 overflow-x-auto mt-6 lg:mt-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>No</TableHead>
+                  <TableHead>Tidak Tersedia Mulai</TableHead>
+                  <TableHead>Sampai</TableHead>
+                  <TableHead></TableHead>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      )}
+              </TableHeader>
+              <TableBody>
+                {unavailabilities.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={4}
+                      className="text-center text-muted-foreground py-6"
+                    >
+                      Tidak ada pengaturan unavailability untuk bulan{" "}
+                      {month.toLocaleDateString("id-ID", {
+                        month: "long",
+                        year: "numeric",
+                      })}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  unavailabilities.map((u, idx) => (
+                    <TableRow key={u.id}>
+                      <TableCell>{idx + 1}</TableCell>
+                      <TableCell>
+                        {new Date(u.start_date).toLocaleDateString("id-ID", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                        })}
+                      </TableCell>
+                      <TableCell>
+                        {new Date(u.end_date).toLocaleDateString("id-ID", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                        })}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => setDeleteTarget(u)}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" /> Hapus
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </div>
 
       {/* Add Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
