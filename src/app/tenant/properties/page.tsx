@@ -344,7 +344,9 @@ export default function PropertiesPage() {
                           <Edit className="mr-2 h-4 w-4" />
                           Edit Properti
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => router.push(`/tenant/rooms/add`)}
+                        >
                           <Home className="mr-2 h-4 w-4" />
                           Tambah Room
                         </DropdownMenuItem>
