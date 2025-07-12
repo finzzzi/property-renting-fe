@@ -1,6 +1,7 @@
 import PromoCarousel from "@/components/PromoCarousel";
 import PropertySearchForm from "@/components/PropertySearchForm";
 import PopularDestinations from "@/components/PopularDestinations";
+import WhyChooseUs from "@/components/WhyChooseUs";
 
 const Home = () => {
   return (
@@ -24,6 +25,9 @@ const Home = () => {
 
       {/* Popular Destinations Section */}
       <PopularDestinations />
+
+      {/* Why Choose Us Section */}
+      <WhyChooseUs />
     </div>
   );
 };
