@@ -15,7 +15,7 @@ const Home = () => {
 
         <div className="container mx-auto px-4 ">
           <div className="mb-8">
-            <h2 className="text-2xl font-extrabold text-center mb-6 md:mt-2 text-white">
+            <h2 className="text-3xl font-extrabold text-center mb-6 md:mt-2 text-white">
               Cari Penginapan Terbaik
             </h2>
             <PropertySearchForm />
