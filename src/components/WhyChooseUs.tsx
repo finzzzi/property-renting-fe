@@ -15,7 +15,7 @@ const WhyChooseUs = () => {
       title: "Pilihan Akomodasi yang Beragam",
       description:
         "Pilihan hotel, vila, resor, apartemen, glamping, dari yang murah hingga yang mewah!",
-      bgColor: "bg-blue-50",
+      bgColor: "bg-slate-50",
       iconColor: "text-blue-600",
     },
     {
@@ -23,7 +23,7 @@ const WhyChooseUs = () => {
       title: "Pembayaran Mudah dan Fleksibel",
       description:
         "Pilih kemudahan dengan Bayar di Hotel dan hemat lebih banyak dengan PayLater.",
-      bgColor: "bg-cyan-50",
+      bgColor: "bg-slate-50",
       iconColor: "text-cyan-600",
     },
     {
@@ -31,7 +31,7 @@ const WhyChooseUs = () => {
       title: "Program Loyalitas Pelanggan",
       description:
         "Tingkatkan level Stay.in Priority untuk mendapat manfaat menakjubkan dan perk khusus.",
-      bgColor: "bg-purple-50",
+      bgColor: "bg-slate-50",
       iconColor: "text-purple-600",
     },
     {
@@ -39,7 +39,7 @@ const WhyChooseUs = () => {
       title: "Lebih Nyaman dengan CleanAccommodation",
       description:
         "Mengikuti standar kesehatan dan keamanan yang disetujui pemerintah.",
-      bgColor: "bg-green-50",
+      bgColor: "bg-slate-50",
       iconColor: "text-green-600",
     },
     {
@@ -47,7 +47,7 @@ const WhyChooseUs = () => {
       title: "Ulasan Tamu Asli",
       description:
         "Jutaan ulasan terverifikasi dari tamu yang menginap di Stay.in!",
-      bgColor: "bg-yellow-50",
+      bgColor: "bg-slate-50",
       iconColor: "text-yellow-600",
     },
   ];
