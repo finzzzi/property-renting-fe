@@ -76,7 +76,7 @@ const RoomList: React.FC<RoomListProps> = ({
                 <Image
                   src={
                     room.room_pictures && room.room_pictures.length > 0
-                      ? room.room_pictures[0].public_url
+                      ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/room-pictures//${room.room_pictures[0].file_path}`
                       : `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/property-pictures//placeholder.png`
                   }
                   alt={room.name}
