@@ -520,7 +520,11 @@ export default function PropertyGalleryPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={closeDeleteDialog}>
+            <Button
+              variant="outline"
+              onClick={closeDeleteDialog}
+              disabled={submitting}
+            >
               Batal
             </Button>
             <Button

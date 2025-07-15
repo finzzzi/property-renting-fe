@@ -451,8 +451,13 @@ export default function AddPropertyPage() {
 
             {/* Submit Button */}
             <div className="flex justify-end space-x-4">
-              <Button type="button" variant="outline" asChild>
-                <Link href="/tenant/properties">Batal</Link>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={loading}
+                onClick={() => !loading && router.push("/tenant/properties")}
+              >
+                Batal
               </Button>
               <Button type="submit" disabled={loading}>
                 {loading ? (

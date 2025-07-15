@@ -665,6 +665,7 @@ export default function PeakSeasonsPage() {
             <Button
               variant="secondary"
               onClick={() => setShowConfirmDialog(false)}
+              disabled={submitting}
             >
               Batal
             </Button>
@@ -691,7 +692,11 @@ export default function PeakSeasonsPage() {
             Anda yakin ingin menghapus data ini?
           </DialogDescription>
           <DialogFooter>
-            <Button variant="secondary" onClick={() => setDeleteTarget(null)}>
+            <Button
+              variant="secondary"
+              onClick={() => setDeleteTarget(null)}
+              disabled={submitting}
+            >
               Batal
             </Button>
             <Button

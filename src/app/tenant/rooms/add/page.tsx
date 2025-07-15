@@ -481,8 +481,13 @@ export default function AddRoomPage() {
 
             {/* Submit Button */}
             <div className="flex justify-end space-x-4">
-              <Button type="button" variant="outline" asChild>
-                <Link href="/tenant/rooms">Batal</Link>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={submitting}
+                onClick={() => !submitting && router.push("/tenant/rooms")}
+              >
+                Batal
               </Button>
               <Button type="submit" disabled={submitting}>
                 {submitting ? (

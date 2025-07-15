@@ -526,8 +526,14 @@ export default function AddPropertyPicturePage() {
 
             {/* Action Buttons */}
             <div className="flex items-center justify-end gap-3 pt-4">
-              <Button variant="outline" asChild>
-                <Link href="/tenant/gallery/properties">Batal</Link>
+              <Button
+                variant="outline"
+                disabled={submitting}
+                onClick={() =>
+                  !submitting && router.push("/tenant/gallery/properties")
+                }
+              >
+                Batal
               </Button>
               <Button type="submit" disabled={submitting}>
                 {submitting ? (
@@ -548,8 +554,8 @@ export default function AddPropertyPicturePage() {
       </form>
 
       {/* Confirmation Dialog */}
-      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <DialogContent>
+      <Dialog open={showConfirmDialog}>
+        <DialogContent className="[&>button]:hidden">
           <DialogHeader>
             <DialogTitle>Konfirmasi Upload</DialogTitle>
             <DialogDescription>
@@ -574,8 +580,8 @@ export default function AddPropertyPicturePage() {
       </Dialog>
 
       {/* Success Dialog */}
-      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-        <DialogContent>
+      <Dialog open={showSuccessDialog}>
+        <DialogContent className="[&>button]:hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-primary">
               <Check className="h-5 w-5" />

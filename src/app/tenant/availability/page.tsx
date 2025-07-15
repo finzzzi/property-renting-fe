@@ -559,6 +559,7 @@ export default function AvailabilityPage() {
             <Button
               variant="secondary"
               onClick={() => setShowConfirmDialog(false)}
+              disabled={submitting}
             >
               Batal
             </Button>
@@ -586,7 +587,11 @@ export default function AvailabilityPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="secondary" onClick={() => setDeleteTarget(null)}>
+            <Button
+              variant="secondary"
+              onClick={() => setDeleteTarget(null)}
+              disabled={submitting}
+            >
               Batal
             </Button>
             <Button
