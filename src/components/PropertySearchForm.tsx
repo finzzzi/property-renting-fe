@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { CalendarIcon, MapPinIcon, UsersIcon, ClockIcon } from "lucide-react";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
@@ -60,23 +60,66 @@ const PropertySearchForm = ({
   defaultValues,
   onSearch,
 }: PropertySearchFormProps) => {
+  // Helper untuk format tanggal YYYY-MM-DD
+  const formatDateToString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  // Default yang diminta (Jakarta id=159, besok, 2 malam, 2 orang)
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const defaultCheckInStr = formatDateToString(tomorrow);
+  const defaultCheckOutDate = new Date(tomorrow);
+  defaultCheckOutDate.setDate(defaultCheckOutDate.getDate() + 2);
+  const defaultCheckOutStr = formatDateToString(defaultCheckOutDate);
+
+  const effectiveDefaults = useMemo(() => {
+    return {
+      city_id: defaultValues?.city_id ?? "159",
+      check_in: defaultValues?.check_in ?? defaultCheckInStr,
+      check_out: defaultValues?.check_out ?? defaultCheckOutStr,
+      guests: defaultValues?.guests ?? "2",
+    } as const;
+  }, [defaultValues, defaultCheckInStr, defaultCheckOutStr]);
+
+  // State
   const [cities, setCities] = useState<City[]>([]);
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
-  const [checkInDate, setCheckInDate] = useState<Date>();
-  const [duration, setDuration] = useState<string>("");
-  const [guests, setGuests] = useState<string>("");
+  const [checkInDate, setCheckInDate] = useState<Date | undefined>(
+    new Date(effectiveDefaults.check_in)
+  );
+  const initialDuration = (() => {
+    const checkIn = new Date(effectiveDefaults.check_in);
+    const checkOut = new Date(effectiveDefaults.check_out);
+    const diffTime = Math.abs(checkOut.getTime() - checkIn.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)).toString();
+  })();
+  const [duration, setDuration] = useState<string>(initialDuration);
+  const [guests, setGuests] = useState<string>(effectiveDefaults.guests);
   const [cityPopoverOpen, setCityPopoverOpen] = useState(false);
   const [datePopoverOpen, setDatePopoverOpen] = useState(false);
+  const [guestsPopoverOpen, setGuestsPopoverOpen] = useState(false);
+  const [guestInput, setGuestInput] = useState<string>("");
+
+  // Reset input filter saat popover dibuka kembali
+  useEffect(() => {
+    if (guestsPopoverOpen) {
+      setGuestInput("");
+    }
+  }, [guestsPopoverOpen]);
 
   useEffect(() => {
     const fetchCities = async () => {
       const { data: citiesData } = await supabase.from("cities").select("*");
       setCities(citiesData || []);
 
-      // Set default city if provided
-      if (defaultValues?.city_id && citiesData) {
+      // Set default city berdasarkan effectiveDefaults
+      if (effectiveDefaults.city_id && citiesData) {
         const defaultCity = citiesData.find(
-          (city) => city.id.toString() === defaultValues.city_id
+          (city) => city.id.toString() === effectiveDefaults.city_id
         );
         if (defaultCity) {
           setSelectedCity(defaultCity);
@@ -84,24 +127,24 @@ const PropertySearchForm = ({
       }
     };
     fetchCities();
-  }, [defaultValues?.city_id]);
+  }, [effectiveDefaults.city_id]);
 
-  // Set other default values
+  // Set other default values jika props berubah
   useEffect(() => {
-    if (defaultValues?.check_in) {
-      setCheckInDate(new Date(defaultValues.check_in));
+    if (effectiveDefaults.check_in) {
+      setCheckInDate(new Date(effectiveDefaults.check_in));
     }
-    if (defaultValues?.check_out && defaultValues?.check_in) {
-      const checkIn = new Date(defaultValues.check_in);
-      const checkOut = new Date(defaultValues.check_out);
+    if (effectiveDefaults.check_out && effectiveDefaults.check_in) {
+      const checkIn = new Date(effectiveDefaults.check_in);
+      const checkOut = new Date(effectiveDefaults.check_out);
       const diffTime = Math.abs(checkOut.getTime() - checkIn.getTime());
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       setDuration(diffDays.toString());
     }
-    if (defaultValues?.guests) {
-      setGuests(defaultValues.guests);
+    if (effectiveDefaults.guests) {
+      setGuests(effectiveDefaults.guests);
     }
-  }, [defaultValues]);
+  }, [effectiveDefaults]);
 
   const handleSearch = () => {
     if (!selectedCity || !checkInDate || !duration || !guests) {
@@ -112,14 +155,6 @@ const PropertySearchForm = ({
     // Calculate check_out date based on check_in and duration
     const checkOutDate = new Date(checkInDate);
     checkOutDate.setDate(checkOutDate.getDate() + parseInt(duration));
-
-    // Format date without timezone issues
-    const formatDateToString = (date: Date) => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
-      return `${year}-${month}-${day}`;
-    };
 
     const searchData: SearchFormData = {
       city_id: selectedCity.id.toString(),
@@ -146,6 +181,9 @@ const PropertySearchForm = ({
       <CardContent>
         <div className="space-y-4">
           <div className="space-y-2">
+            <p className="text-sm font-medium text-gray-500">
+              Pilih kota/kabupaten
+            </p>
             <Popover open={cityPopoverOpen} onOpenChange={setCityPopoverOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -196,6 +234,9 @@ const PropertySearchForm = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
+              <p className="text-sm font-medium text-gray-500">
+                Tanggal Check-in
+              </p>
               <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -239,6 +280,9 @@ const PropertySearchForm = ({
             </div>
 
             <div className="space-y-2">
+              <p className="text-sm font-medium text-gray-500">
+                Durasi Menginap
+              </p>
               <Select value={duration} onValueChange={setDuration}>
                 <SelectTrigger className="w-full">
                   <div className="flex items-center gap-2">
@@ -247,7 +291,7 @@ const PropertySearchForm = ({
                   </div>
                 </SelectTrigger>
                 <SelectContent>
-                  {[1, 2, 3, 4, 5, 6, 7].map((night) => (
+                  {Array.from({ length: 30 }, (_, i) => i + 1).map((night) => (
                     <SelectItem key={night} value={night.toString()}>
                       {night} malam
                     </SelectItem>
@@ -259,21 +303,72 @@ const PropertySearchForm = ({
 
           <div className="grid grid-cols-2 gap-4 items-end">
             <div className="space-y-2">
-              <Select value={guests} onValueChange={setGuests}>
-                <SelectTrigger className="w-full">
-                  <div className="flex items-center gap-2">
+              <p className="text-sm font-medium text-gray-500">Jumlah Tamu</p>
+              <Popover
+                open={guestsPopoverOpen}
+                onOpenChange={setGuestsPopoverOpen}
+              >
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={guestsPopoverOpen}
+                    className="w-full justify-start"
+                  >
                     <UsersIcon className="h-4 w-4" />
-                    <SelectValue placeholder="Jumlah Tamu" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  {[1, 2, 3, 4, 5].map((person) => (
-                    <SelectItem key={person} value={person.toString()}>
-                      {person} orang
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    {guests ? `${guests} orang` : "Jumlah Tamu"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="p-0"
+                  sideOffset={5}
+                  style={{ width: "var(--radix-popover-trigger-width)" }}
+                >
+                  <Command>
+                    <CommandInput
+                      placeholder="Ketik jumlah tamu atau pilih dari daftar"
+                      autoFocus={false}
+                      tabIndex={-1}
+                      value={guestInput}
+                      onValueChange={(value) => {
+                        // Only allow numbers
+                        const numericValue = value.replace(/[^0-9]/g, "");
+                        if (
+                          numericValue === "" ||
+                          (parseInt(numericValue) > 0 &&
+                            parseInt(numericValue) <= 50)
+                        ) {
+                          setGuestInput(numericValue);
+                          setGuests(numericValue);
+                        }
+                      }}
+                    />
+                    <CommandList>
+                      <CommandEmpty>
+                        {guestInput && parseInt(guestInput) > 0
+                          ? `${guestInput} orang`
+                          : "Masukkan jumlah tamu"}
+                      </CommandEmpty>
+                      <CommandGroup>
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((person) => (
+                          <CommandItem
+                            key={person}
+                            value={person.toString()}
+                            onSelect={() => {
+                              const strVal = person.toString();
+                              setGuests(strVal);
+                              setGuestInput(strVal);
+                              setGuestsPopoverOpen(false);
+                            }}
+                          >
+                            {person} orang
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="flex justify-center">
