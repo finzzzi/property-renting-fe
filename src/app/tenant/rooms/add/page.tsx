@@ -21,7 +21,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Save, Building2, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Building2, Loader2, Upload, X } from "lucide-react";
+import Image from "next/image";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -67,6 +68,37 @@ export default function AddRoomPage() {
   });
 
   const [formErrors, setFormErrors] = useState<Partial<RoomFormData>>({});
+
+  // ===== Foto Room =====
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+
+  const validatePhoto = (file: File): string | null => {
+    const allowed = ["image/jpeg", "image/jpg", "image/png"];
+    if (!allowed.includes(file.type)) return "Harus JPG/JPEG/PNG";
+    if (file.size > 2 * 1024 * 1024) return "Ukuran maks 2MB";
+    return null;
+  };
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const err = validatePhoto(file);
+    if (err) {
+      setPhotoError(err);
+      return;
+    }
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+    setPhotoError(null);
+  };
+
+  const removePhoto = () => {
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhotoFile(null);
+    setPhotoPreview(null);
+  };
 
   useEffect(() => {
     if (session) {
@@ -221,7 +253,28 @@ export default function AddRoomPage() {
         );
       }
 
-      // Redirect to rooms list on success
+      const data = await response.json();
+      const roomId = data?.data?.id ?? data?.id ?? null;
+
+      // Upload foto jika dipilih
+      if (roomId && photoFile) {
+        const fd = new FormData();
+        fd.append("file", photoFile);
+        try {
+          await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/pictures/rooms/${roomId}`,
+            {
+              method: "POST",
+              headers: { Authorization: `Bearer ${session.access_token}` },
+              body: fd,
+            }
+          );
+        } catch (e) {
+          console.error("Upload foto room gagal", e);
+        }
+      }
+
+      // Redirect
       router.push("/tenant/rooms");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Terjadi kesalahan");
@@ -470,6 +523,55 @@ export default function AddRoomPage() {
                   <p className="text-sm text-red-500">{formErrors.quantity}</p>
                 )}
               </div>
+            </div>
+
+            {/* Foto Room (Opsional) */}
+            <div className="space-y-2">
+              <Label>Foto Room</Label>
+              {photoFile ? (
+                <div className="border rounded-lg p-4 flex items-start gap-4">
+                  {photoPreview && (
+                    <div className="relative h-20 w-20 rounded-md overflow-hidden bg-muted">
+                      <Image
+                        src={photoPreview}
+                        alt="Preview"
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {photoFile.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {(photoFile.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={removePhoto}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                  <Upload className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
+                  <p className="text-sm">Pilih gambar JPG/JPEG/PNG (≤ 2MB)</p>
+                  <Input
+                    type="file"
+                    accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                    className="mt-4"
+                    onChange={handlePhotoChange}
+                  />
+                </div>
+              )}
+              {photoError && (
+                <p className="text-sm text-red-600">{photoError}</p>
+              )}
             </div>
 
             {/* Error Message */}
