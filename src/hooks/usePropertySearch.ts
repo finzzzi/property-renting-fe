@@ -27,6 +27,14 @@ export const usePropertySearch = (initialSearchParams: SearchParams) => {
     CategoryWithCount[]
   >([]);
 
+  // All categories fetched from /properties/categories
+  const [allCategories, setAllCategories] = useState<string[]>([]);
+
+  // Store last calculated counts so we can recompute availableCategories when allCategories arrives
+  const [categoryCounts, setCategoryCounts] = useState<{
+    [key: string]: number;
+  }>({});
+
   const searchProperties = async (params: SearchParams) => {
     try {
       setLoading(true);
@@ -68,29 +76,46 @@ export const usePropertySearch = (initialSearchParams: SearchParams) => {
         setPagination(data.pagination);
 
         // Process categories with counts
-        const categoryCount: { [key: string]: number } = {};
+        const counts: { [key: string]: number } = {};
 
-        // Count properties per category from current results
-        if (data.data && Array.isArray(data.data)) {
-          data.data.forEach((property) => {
-            categoryCount[property.category] =
-              (categoryCount[property.category] || 0) + 1;
+        // Count occurrences from `categories` array in response (represents all properties for current query)
+        if (data.categories && Array.isArray(data.categories)) {
+          data.categories.forEach((cat) => {
+            counts[cat.name] = (counts[cat.name] || 0) + 1;
           });
         }
 
-        // Get unique categories from response
-        const uniqueCategories =
-          data.categories && Array.isArray(data.categories)
-            ? [...new Set(data.categories.map((cat) => cat.name))]
-            : [];
+        // Fallback: if categories array is not present, count from the properties list on current page
+        if (
+          (!data.categories || data.categories.length === 0) &&
+          data.data &&
+          Array.isArray(data.data)
+        ) {
+          data.data.forEach((property) => {
+            counts[property.category] = (counts[property.category] || 0) + 1;
+          });
+        }
 
-        // Create category list with counts
-        const categoriesWithCount: CategoryWithCount[] = uniqueCategories.map(
-          (categoryName) => ({
-            name: categoryName,
-            count: categoryCount[categoryName] || 0,
-          })
+        // Tentukan apakah kita perlu memperbarui jumlah kategori.
+        const shouldUpdateCounts = !params.category_name; // tidak ada filter kategori
+
+        if (shouldUpdateCounts) {
+          // Simpan counts baru untuk dipakai di seluruh aplikasi
+          setCategoryCounts(counts);
+        }
+
+        // Gunakan counts lama jika tidak diperbarui
+        const baseCounts = shouldUpdateCounts ? counts : categoryCounts;
+
+        const mergedCategoryNames = Array.from(
+          new Set([...(allCategories || []), ...Object.keys(baseCounts)])
         );
+
+        const categoriesWithCount: CategoryWithCount[] =
+          mergedCategoryNames.map((name) => ({
+            name,
+            count: baseCounts[name] || 0,
+          }));
 
         setAvailableCategories(categoriesWithCount);
       } else {
@@ -197,31 +222,80 @@ export const usePropertySearch = (initialSearchParams: SearchParams) => {
     setSelectedCategories(updatedCategories);
   };
 
-  // Initialize from URL params
+  // Recompute availableCategories whenever the static list or the counts change
   useEffect(() => {
     if (
-      initialSearchParams.city_id &&
-      initialSearchParams.check_in &&
-      initialSearchParams.check_out &&
-      initialSearchParams.guests
+      allCategories.length === 0 &&
+      Object.keys(categoryCounts).length === 0
     ) {
-      // Initialize filter states from URL
-      setPropertyNameFilter(initialSearchParams.property_name || "");
-      setSelectedCategories(
-        initialSearchParams.category_name
-          ? initialSearchParams.category_name.split(",")
-          : []
-      );
-
-      if (initialSearchParams.sort_by && initialSearchParams.sort_order) {
-        const sortValue = `${initialSearchParams.sort_by}-${initialSearchParams.sort_order}`;
-        setSortOption(sortValue);
-      }
-
-      searchProperties(initialSearchParams);
-    } else {
-      setLoading(false);
+      return;
     }
+
+    const mergedCategoryNames = Array.from(
+      new Set([...allCategories, ...Object.keys(categoryCounts)])
+    );
+
+    const categoriesWithCount: CategoryWithCount[] = mergedCategoryNames.map(
+      (name) => ({
+        name,
+        count: categoryCounts[name] || 0,
+      })
+    );
+
+    setAvailableCategories(categoriesWithCount);
+  }, [allCategories, categoryCounts]);
+
+  // Fetch all categories once and perform initial search
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        setLoading(true);
+
+        // Fetch all categories (static list)
+        try {
+          const res = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/properties/categories`
+          );
+          if (res.ok) {
+            const cats = await res.json();
+            if (cats.success && Array.isArray(cats.data)) {
+              const names = cats.data.map((c: { name: string }) => c.name);
+              setAllCategories(names);
+            }
+          }
+        } catch (err) {
+          // Silent fail – categories list will be empty
+          console.error("Gagal mengambil daftar kategori", err);
+        }
+
+        if (
+          initialSearchParams.city_id &&
+          initialSearchParams.check_in &&
+          initialSearchParams.check_out &&
+          initialSearchParams.guests
+        ) {
+          // Initialize filter states from URL
+          setPropertyNameFilter(initialSearchParams.property_name || "");
+          setSelectedCategories(
+            initialSearchParams.category_name
+              ? initialSearchParams.category_name.split(",")
+              : []
+          );
+
+          if (initialSearchParams.sort_by && initialSearchParams.sort_order) {
+            const sortValue = `${initialSearchParams.sort_by}-${initialSearchParams.sort_order}`;
+            setSortOption(sortValue);
+          }
+
+          await searchProperties(initialSearchParams);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInitialData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return {
