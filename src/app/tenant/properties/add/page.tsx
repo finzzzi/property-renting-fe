@@ -35,7 +35,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Building2, MapPinIcon, ArrowLeft, Loader2 } from "lucide-react";
+import {
+  Building2,
+  MapPinIcon,
+  ArrowLeft,
+  Loader2,
+  Upload,
+  X,
+} from "lucide-react";
+import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -89,6 +97,90 @@ export default function AddPropertyPage() {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const { session, loading: authLoading } = useAuth();
   const router = useRouter();
+
+  // ====== STATE UNTUK UPLOAD FOTO ======
+  const [mainPhoto, setMainPhoto] = useState<File | null>(null);
+  const [mainPreview, setMainPreview] = useState<string | null>(null);
+  const [additionalPhotos, setAdditionalPhotos] = useState<(File | null)[]>([
+    null,
+    null,
+    null,
+    null,
+  ]);
+  const [additionalPreviews, setAdditionalPreviews] = useState<
+    (string | null)[]
+  >([null, null, null, null]);
+  const [photoErrors, setPhotoErrors] = useState<{
+    main?: string;
+    additional: (string | null)[];
+  }>({ additional: [null, null, null, null] });
+
+  const validatePhoto = (file: File): string | null => {
+    const allowed = ["image/jpeg", "image/jpg", "image/png"];
+    if (!allowed.includes(file.type)) return "Harus JPG/JPEG/PNG";
+    if (file.size > 2 * 1024 * 1024) return "Ukuran maks 2MB";
+    return null;
+  };
+
+  const handleMainPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const err = validatePhoto(file);
+    if (err) {
+      setPhotoErrors((prev) => ({ ...prev, main: err }));
+      return;
+    }
+    setMainPhoto(file);
+    setMainPreview(URL.createObjectURL(file));
+    setPhotoErrors((prev) => ({ ...prev, main: undefined }));
+  };
+
+  const removeMainPhoto = () => {
+    if (mainPreview) URL.revokeObjectURL(mainPreview);
+    setMainPhoto(null);
+    setMainPreview(null);
+  };
+
+  const handleAdditionalPhotoChange = (
+    idx: number,
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const err = validatePhoto(file);
+    setPhotoErrors((prev) => {
+      const add = [...prev.additional];
+      add[idx] = err;
+      return { ...prev, additional: add };
+    });
+    if (err) return;
+
+    setAdditionalPhotos((prev) => {
+      const copy = [...prev];
+      copy[idx] = file;
+      return copy;
+    });
+
+    setAdditionalPreviews((prev) => {
+      const copy = [...prev];
+      copy[idx] = URL.createObjectURL(file);
+      return copy;
+    });
+  };
+
+  const removeAdditionalPhoto = (idx: number) => {
+    setAdditionalPhotos((prev) => {
+      const copy = [...prev];
+      copy[idx] = null;
+      return copy;
+    });
+    setAdditionalPreviews((prev) => {
+      const copy = [...prev];
+      if (copy[idx]) URL.revokeObjectURL(copy[idx]!);
+      copy[idx] = null;
+      return copy;
+    });
+  };
 
   // Fetch categories
   useEffect(() => {
@@ -220,7 +312,37 @@ export default function AddPropertyPage() {
         throw new Error(errorData.message || "Gagal menambahkan properti");
       }
 
-      // Redirect to properties list on success
+      const data = await response.json();
+      const propertyId = data?.data?.id ?? data?.id ?? null;
+
+      // Upload foto jika ada dan propertyId valid
+      if (propertyId) {
+        const uploadPhoto = async (file: File, isMain: boolean) => {
+          const fd = new FormData();
+          fd.append("file", file);
+          fd.append("isMain", isMain.toString());
+          await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/pictures/properties/${propertyId}`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${session.access_token}`,
+              },
+              body: fd,
+            }
+          );
+        };
+
+        if (mainPhoto) {
+          await uploadPhoto(mainPhoto, true);
+        }
+
+        for (const file of additionalPhotos) {
+          if (file) await uploadPhoto(file, false);
+        }
+      }
+
+      // Redirect setelah semua selesai
       router.push("/tenant/properties");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Terjadi kesalahan");
@@ -447,6 +569,123 @@ export default function AddPropertyPage() {
                   </Command>
                 </PopoverContent>
               </Popover>
+            </div>
+
+            {/* Foto Properti */}
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-medium">Foto Properti</h3>
+                <p className="text-sm text-muted-foreground">
+                  Setiap properti memiliki 1 foto utama dan hingga 4 foto
+                  tambahan
+                </p>
+              </div>
+
+              {/* Foto Utama */}
+              <div className="space-y-2">
+                <Label>Foto Utama</Label>
+                {mainPhoto ? (
+                  <div className="border rounded-lg p-4 flex items-start gap-4">
+                    {mainPreview && (
+                      <div className="relative h-20 w-20 rounded-md overflow-hidden bg-muted">
+                        <Image
+                          src={mainPreview}
+                          alt="Preview"
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {mainPhoto.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {(mainPhoto.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={removeMainPhoto}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                    <Upload className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
+                    <p className="text-sm">Pilih gambar JPG/JPEG/PNG (≤ 2MB)</p>
+                    <Input
+                      type="file"
+                      accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                      className="mt-4"
+                      onChange={handleMainPhotoChange}
+                    />
+                  </div>
+                )}
+                {photoErrors.main && (
+                  <p className="text-sm text-red-600">{photoErrors.main}</p>
+                )}
+              </div>
+
+              {/* Foto Tambahan */}
+              <div className="space-y-2">
+                <Label>Foto Tambahan</Label>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  {additionalPhotos.map((file, idx) => (
+                    <div key={idx} className="space-y-2">
+                      {file ? (
+                        <div className="border rounded-lg p-4 flex items-start gap-4">
+                          {additionalPreviews[idx] && (
+                            <div className="relative h-16 w-16 rounded-md overflow-hidden bg-muted">
+                              <Image
+                                src={additionalPreviews[idx]!}
+                                alt="Preview"
+                                fill
+                                className="object-cover"
+                              />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium truncate">
+                              {file.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {(file.size / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeAdditionalPhoto(idx)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="border-2 border-dashed rounded-lg p-4 text-center">
+                          <Upload className="mx-auto h-6 w-6 text-muted-foreground mb-2" />
+                          <Input
+                            type="file"
+                            accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                            onChange={(e) =>
+                              handleAdditionalPhotoChange(idx, e)
+                            }
+                          />
+                        </div>
+                      )}
+                      {photoErrors.additional[idx] && (
+                        <p className="text-xs text-red-600">
+                          {photoErrors.additional[idx]}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {/* Submit Button */}
