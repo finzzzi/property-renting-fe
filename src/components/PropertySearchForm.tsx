@@ -98,6 +98,15 @@ const PropertySearchForm = ({
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24)).toString();
   })();
   const [duration, setDuration] = useState<string>(initialDuration);
+  // Hitung tanggal check-out otomatis berdasar check-in & durasi
+  const computedCheckOutDate = useMemo(() => {
+    if (checkInDate && duration) {
+      const d = new Date(checkInDate);
+      d.setDate(d.getDate() + parseInt(duration));
+      return d;
+    }
+    return undefined;
+  }, [checkInDate, duration]);
   const [guests, setGuests] = useState<string>(effectiveDefaults.guests);
   const [cityPopoverOpen, setCityPopoverOpen] = useState(false);
   const [datePopoverOpen, setDatePopoverOpen] = useState(false);
@@ -301,7 +310,20 @@ const PropertySearchForm = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 items-end">
+          <div className="grid grid-cols-2 gap-4">
+            {/* Tanggal Check-out */}
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-gray-500">
+                Tanggal Check-out
+              </p>
+              <div className="w-full border rounded-md px-3 py-2 text-left bg-muted">
+                {computedCheckOutDate
+                  ? format(computedCheckOutDate, "PPP", { locale: id })
+                  : "-"}
+              </div>
+            </div>
+
+            {/* Jumlah Tamu */}
             <div className="space-y-2">
               <p className="text-sm font-medium text-gray-500">Jumlah Tamu</p>
               <Popover
@@ -370,16 +392,17 @@ const PropertySearchForm = ({
                 </PopoverContent>
               </Popover>
             </div>
+          </div>
 
-            <div className="flex justify-center">
-              <Button
-                onClick={handleSearch}
-                size="sm"
-                className="w-full md:w-auto px-8 md:px-15 h-full py-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg shadow-md"
-              >
-                Cari Penginapan
-              </Button>
-            </div>
+          {/* Tombol Cari */}
+          <div className="flex justify-center mt-4">
+            <Button
+              onClick={handleSearch}
+              size="sm"
+              className="w-full md:w-auto px-8 md:px-15 h-full py-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg shadow-md"
+            >
+              Cari Penginapan
+            </Button>
           </div>
         </div>
       </CardContent>
