@@ -14,11 +14,18 @@ export async function GET(request: NextRequest) {
     if (!error) {
       if (type === "recovery") {
         return NextResponse.redirect(`${origin}/reset-password`);
+      } else if (type === "email_change") {
+        return NextResponse.redirect(`${origin}/profile?email_changed=true`);
       }
       return NextResponse.redirect(`${origin}${next}`);
     } else {
       console.error("Auth callback - error exchanging code:", error);
     }
+  }
+
+  // Tambahan: handle email_change yang masih membutuhkan konfirmasi kedua
+  if (type === "email_change" && !code) {
+    return NextResponse.redirect(`${origin}/auth/email-change-pending`);
   }
 
   return NextResponse.redirect(`${origin}/auth/auth-code-error`);

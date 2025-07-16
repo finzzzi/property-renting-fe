@@ -34,9 +34,10 @@ import {
   Edit,
   MoreVertical,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import PasswordSetupModal from "@/components/PasswordSetupModal";
+import { createClient } from "@/lib/supabase/client";
 
 interface EditFormData {
   name: string;
@@ -46,6 +47,7 @@ interface EditFormData {
 
 export default function Profile() {
   const { user, userProfile, session, loading, resetPassword } = useAuth();
+  const searchParams = useSearchParams();
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [isResetLoading, setIsResetLoading] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
@@ -59,7 +61,14 @@ export default function Profile() {
   const [showEditConfirmDialog, setShowEditConfirmDialog] = useState(false);
   const [showResetPasswordConfirmDialog, setShowResetPasswordConfirmDialog] =
     useState(false);
+  const [showChangeEmailDialog, setShowChangeEmailDialog] = useState(false);
+  const [showChangeEmailConfirmDialog, setShowChangeEmailConfirmDialog] =
+    useState(false);
   const [isEditLoading, setIsEditLoading] = useState(false);
+  const [isChangeEmailLoading, setIsChangeEmailLoading] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [changeEmailError, setChangeEmailError] = useState("");
+  const [changeEmailSuccess, setChangeEmailSuccess] = useState("");
   const [editFormData, setEditFormData] = useState<EditFormData>({
     name: "",
     phone: "",
@@ -99,6 +108,20 @@ export default function Profile() {
       setEditErrors({});
     }
   }, [userProfile, showEditDialog]);
+
+  // Handle email change confirmation from URL parameter
+  useEffect(() => {
+    const emailChanged = searchParams.get("email_changed");
+    if (emailChanged === "true") {
+      setChangeEmailSuccess(
+        "Email berhasil diubah! Silakan login kembali jika diperlukan."
+      );
+      // Clear the URL parameter
+      const url = new URL(window.location.href);
+      url.searchParams.delete("email_changed");
+      window.history.replaceState({}, "", url.pathname);
+    }
+  }, [searchParams]);
 
   const handlePasswordModalClose = () => {
     setShowPasswordModal(false);
@@ -359,6 +382,74 @@ export default function Profile() {
     setProfileUpdateError("");
   };
 
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const handleChangeEmail = () => {
+    setShowChangeEmailDialog(true);
+  };
+
+  const handleChangeEmailSubmit = () => {
+    if (!newEmail.trim()) {
+      setChangeEmailError("Email baru harus diisi");
+      return;
+    }
+
+    if (!validateEmail(newEmail)) {
+      setChangeEmailError("Format email tidak valid");
+      return;
+    }
+
+    if (newEmail === user?.email) {
+      setChangeEmailError("Email baru tidak boleh sama dengan email saat ini");
+      return;
+    }
+
+    setShowChangeEmailConfirmDialog(true);
+  };
+
+  const handleConfirmChangeEmail = async () => {
+    setIsChangeEmailLoading(true);
+    setChangeEmailError("");
+    setChangeEmailSuccess("");
+    setShowChangeEmailConfirmDialog(false);
+
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.updateUser(
+        {
+          email: newEmail,
+        },
+        {
+          emailRedirectTo: `${window.location.origin}/auth/callback?type=email_change`,
+        }
+      );
+
+      if (error) {
+        setChangeEmailError(error.message || "Gagal mengubah email");
+      } else {
+        setChangeEmailSuccess(
+          "Link konfirmasi perubahan email telah dikirim ke kedua email, silakan klik link konfirmasi di kedua email"
+        );
+        setShowChangeEmailDialog(false);
+        setNewEmail("");
+      }
+    } catch (error: any) {
+      console.error("Error changing email:", error);
+      setChangeEmailError("Terjadi kesalahan saat mengubah email");
+    } finally {
+      setIsChangeEmailLoading(false);
+    }
+  };
+
+  const handleChangeEmailDialogClose = () => {
+    setShowChangeEmailDialog(false);
+    setNewEmail("");
+    setChangeEmailError("");
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -504,9 +595,7 @@ export default function Profile() {
                 <Mail className="w-5 h-5 text-gray-500" />
                 <div>
                   <p className="text-sm text-gray-500">Email</p>
-                  <p className="font-medium">
-                    {userProfile?.email || user?.email}
-                  </p>
+                  <p className="font-medium">{user?.email}</p>
                 </div>
               </div>
 
@@ -587,6 +676,47 @@ export default function Profile() {
                 {resetError && (
                   <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">
                     {resetError}
+                  </div>
+                )}
+
+                {/* Change Email Section */}
+                <div className="flex gap-2 items-center justify-between pt-4 border-t">
+                  <div>
+                    <h3 className="font-medium">Alamat Email</h3>
+                    <p className="text-sm text-gray-500">
+                      Ubah alamat email akun Anda
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={handleChangeEmail}
+                    disabled={isChangeEmailLoading}
+                    className="flex items-center space-x-2"
+                  >
+                    <Mail className="w-4 h-4" />
+                    <span>
+                      {isChangeEmailLoading ? "Memproses..." : "Ubah Email"}
+                    </span>
+                  </Button>
+                </div>
+
+                {/* Change Email Success Message */}
+                {changeEmailSuccess && (
+                  <div className="text-green-600 bg-green-50 p-3 rounded-md">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Check className="w-4 h-4" />
+                      <span className="text-sm font-medium">Berhasil!</span>
+                    </div>
+                    <div className="text-sm whitespace-pre-line">
+                      {changeEmailSuccess}
+                    </div>
+                  </div>
+                )}
+
+                {/* Change Email Error Message */}
+                {changeEmailError && (
+                  <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">
+                    {changeEmailError}
                   </div>
                 )}
               </div>
@@ -733,6 +863,103 @@ export default function Profile() {
               disabled={isResetLoading}
             >
               {isResetLoading ? "Mengirim..." : "Ya, Kirim"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Email Dialog */}
+      <Dialog
+        open={showChangeEmailDialog}
+        onOpenChange={handleChangeEmailDialogClose}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ubah Alamat Email</DialogTitle>
+            <DialogDescription>
+              Masukkan alamat email baru. Link konfirmasi akan dikirim ke email
+              baru Anda.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="current-email">Email Saat Ini</Label>
+              <Input
+                id="current-email"
+                type="email"
+                value={user?.email || ""}
+                disabled
+                className="bg-gray-50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="new-email">Email Baru</Label>
+              <Input
+                id="new-email"
+                type="email"
+                placeholder="Masukkan email baru"
+                value={newEmail}
+                onChange={(e) => {
+                  setNewEmail(e.target.value);
+                  setChangeEmailError("");
+                }}
+                className={changeEmailError ? "border-red-500" : ""}
+              />
+            </div>
+
+            {changeEmailError && (
+              <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">
+                {changeEmailError}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={handleChangeEmailDialogClose}
+              disabled={isChangeEmailLoading}
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={handleChangeEmailSubmit}
+              disabled={isChangeEmailLoading}
+            >
+              Lanjutkan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Email Confirmation Dialog */}
+      <Dialog
+        open={showChangeEmailConfirmDialog}
+        onOpenChange={setShowChangeEmailConfirmDialog}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Konfirmasi Perubahan Email</DialogTitle>
+            <DialogDescription>
+              Apakah Anda yakin ingin mengubah email ke{" "}
+              <strong>{newEmail}</strong>?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowChangeEmailConfirmDialog(false)}
+              disabled={isChangeEmailLoading}
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={handleConfirmChangeEmail}
+              disabled={isChangeEmailLoading}
+            >
+              {isChangeEmailLoading ? "Memproses..." : "Ya, Ubah Email"}
             </Button>
           </DialogFooter>
         </DialogContent>
