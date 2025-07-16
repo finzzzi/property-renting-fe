@@ -3,18 +3,50 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import Image from "next/image";
-import { User, Mail, Phone, MapPin, Lock, Check } from "lucide-react";
+import {
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Lock,
+  Check,
+  Camera,
+  Trash2,
+  Upload,
+  Edit,
+  MoreVertical,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import PasswordSetupModal from "@/components/PasswordSetupModal";
 
 export default function Profile() {
-  const { user, userProfile, loading, resetPassword } = useAuth();
+  const { user, userProfile, session, loading, resetPassword } = useAuth();
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [isResetLoading, setIsResetLoading] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
   const [resetError, setResetError] = useState("");
+  const [isUploadLoading, setIsUploadLoading] = useState(false);
+  const [isDeleteLoading, setIsDeleteLoading] = useState(false);
+  const [profileUpdateSuccess, setProfileUpdateSuccess] = useState("");
+  const [profileUpdateError, setProfileUpdateError] = useState("");
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -60,6 +92,108 @@ export default function Profile() {
     }
   };
 
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validasi file
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif"];
+    if (!allowedTypes.includes(file.type)) {
+      setProfileUpdateError(
+        "Format file tidak didukung. Gunakan JPG, PNG, atau GIF."
+      );
+      return;
+    }
+
+    const maxSize = 1 * 1024 * 1024; // 1MB
+    if (file.size > maxSize) {
+      setProfileUpdateError("Ukuran file terlalu besar. Maksimal 1MB.");
+      return;
+    }
+
+    setIsUploadLoading(true);
+    setProfileUpdateError("");
+    setProfileUpdateSuccess("");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/pictures/profile/upload`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session?.access_token}`,
+          },
+          body: formData,
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        setProfileUpdateSuccess("Foto profil berhasil diupload");
+        // Refresh halaman untuk update foto profil
+        window.location.reload();
+      } else {
+        setProfileUpdateError(data.message || "Gagal mengupload foto profil");
+      }
+    } catch (error: any) {
+      console.error("Error uploading profile picture:", error);
+      setProfileUpdateError("Terjadi kesalahan saat mengupload foto profil");
+    } finally {
+      setIsUploadLoading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleDeleteProfilePicture = async () => {
+    if (!userProfile?.profile_picture) return;
+
+    setIsDeleteLoading(true);
+    setProfileUpdateError("");
+    setProfileUpdateSuccess("");
+    setShowDeleteDialog(false);
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/pictures/profile/delete`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${session?.access_token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        setProfileUpdateSuccess("Foto profil berhasil dihapus");
+        // Refresh halaman untuk update foto profil
+        window.location.reload();
+      } else {
+        setProfileUpdateError(data.message || "Gagal menghapus foto profil");
+      }
+    } catch (error: any) {
+      console.error("Error deleting profile picture:", error);
+      setProfileUpdateError("Terjadi kesalahan saat menghapus foto profil");
+    } finally {
+      setIsDeleteLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -84,20 +218,102 @@ export default function Profile() {
           <CardContent className="space-y-6">
             {/* Profile Picture */}
             <div className="flex justify-center">
-              {userProfile?.profile_picture ? (
-                <Image
-                  src={userProfile.profile_picture}
-                  alt="Profile"
-                  width={100}
-                  height={100}
-                  className="rounded-full"
+              <div className="relative group">
+                {userProfile?.profile_picture ? (
+                  <div className="relative">
+                    <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-200">
+                      <Image
+                        src={userProfile.profile_picture}
+                        alt="Profile"
+                        width={96}
+                        height={96}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    {/* Edit button overlay */}
+                    <div className="absolute inset-0 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="p-2 bg-white/90 hover:bg-white rounded-full"
+                            disabled={isUploadLoading || isDeleteLoading}
+                          >
+                            {isUploadLoading || isDeleteLoading ? (
+                              <div className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                              <Edit className="w-4 h-4 text-gray-700" />
+                            )}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="center" className="w-48">
+                          <DropdownMenuItem
+                            onClick={handleUploadClick}
+                            className="cursor-pointer"
+                          >
+                            <Camera className="w-4 h-4 mr-2" />
+                            Ubah Foto Profil
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setShowDeleteDialog(true)}
+                            className="cursor-pointer text-red-600 focus:text-red-600"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Hapus Foto Profil
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center">
+                      <User className="w-12 h-12 text-gray-400" />
+                    </div>
+                    {/* Upload button overlay */}
+                    <div className="absolute inset-0 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleUploadClick}
+                        disabled={isUploadLoading}
+                        className="p-2 bg-white/90 hover:bg-white rounded-full"
+                      >
+                        {isUploadLoading ? (
+                          <div className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                          <Upload className="w-4 h-4 text-gray-700" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/gif"
+                  onChange={handleFileUpload}
+                  className="hidden"
                 />
-              ) : (
-                <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center">
-                  <User className="w-12 h-12 text-gray-400" />
-                </div>
-              )}
+              </div>
             </div>
+
+            {/* Profile Update Messages */}
+            {profileUpdateSuccess && (
+              <div className="flex items-center space-x-2 text-green-600 bg-green-50 p-3 rounded-md justify-center">
+                <Check className="w-4 h-4" />
+                <span className="text-sm">{profileUpdateSuccess}</span>
+              </div>
+            )}
+
+            {profileUpdateError && (
+              <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">
+                {profileUpdateError}
+              </div>
+            )}
 
             {/* User Info */}
             <div className="space-y-4">
@@ -205,6 +421,35 @@ export default function Profile() {
           </Card>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Hapus Foto Profil</DialogTitle>
+            <DialogDescription>
+              Apakah Anda yakin ingin menghapus foto profil? Tindakan ini tidak
+              dapat dibatalkan.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+              disabled={isDeleteLoading}
+            >
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteProfilePicture}
+              disabled={isDeleteLoading}
+            >
+              {isDeleteLoading ? "Menghapus..." : "Hapus"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <PasswordSetupModal
         isOpen={showPasswordModal}

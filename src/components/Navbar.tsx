@@ -49,13 +49,15 @@ const Navbar = () => {
                     className="flex items-center space-x-2 text-white hover:bg-slate-900 hover:text-white"
                   >
                     {userProfile?.profile_picture ? (
-                      <Image
-                        src={userProfile.profile_picture}
-                        alt="Profile"
-                        width={32}
-                        height={32}
-                        className="rounded-full"
-                      />
+                      <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200">
+                        <Image
+                          src={userProfile.profile_picture}
+                          alt="Profile"
+                          width={32}
+                          height={32}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
                     ) : (
                       <User className="w-5 h-5" />
                     )}
