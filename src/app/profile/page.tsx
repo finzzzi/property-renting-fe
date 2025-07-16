@@ -3,6 +3,9 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +38,12 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import PasswordSetupModal from "@/components/PasswordSetupModal";
 
+interface EditFormData {
+  name: string;
+  phone: string;
+  address: string;
+}
+
 export default function Profile() {
   const { user, userProfile, session, loading, resetPassword } = useAuth();
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -46,6 +55,14 @@ export default function Profile() {
   const [profileUpdateSuccess, setProfileUpdateSuccess] = useState("");
   const [profileUpdateError, setProfileUpdateError] = useState("");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [isEditLoading, setIsEditLoading] = useState(false);
+  const [editFormData, setEditFormData] = useState<EditFormData>({
+    name: "",
+    phone: "",
+    address: "",
+  });
+  const [editErrors, setEditErrors] = useState<Partial<EditFormData>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -67,6 +84,18 @@ export default function Profile() {
       }
     }
   }, [user]);
+
+  // Initialize edit form data when profile is loaded or dialog opens
+  useEffect(() => {
+    if (userProfile && showEditDialog) {
+      setEditFormData({
+        name: userProfile.name || "",
+        phone: userProfile.phone || "",
+        address: userProfile.address || "",
+      });
+      setEditErrors({});
+    }
+  }, [userProfile, showEditDialog]);
 
   const handlePasswordModalClose = () => {
     setShowPasswordModal(false);
@@ -194,6 +223,130 @@ export default function Profile() {
     }
   };
 
+  const validatePhoneNumber = (phone: string): boolean => {
+    if (!phone) return true; // Optional field
+
+    // Remove all spaces and dashes
+    const cleanPhone = phone.replace(/[\s-]/g, "");
+
+    // Check format patterns
+    const patterns = [
+      /^0\d{7,12}$/, // 0812345678 (8-13 digits total)
+      /^62\d{8,12}$/, // 62812345678 (10-14 digits total)
+      /^\+62\d{8,12}$/, // +62812345678 (11-15 chars total)
+    ];
+
+    return patterns.some((pattern) => pattern.test(cleanPhone));
+  };
+
+  const validateEditForm = (): boolean => {
+    const errors: Partial<EditFormData> = {};
+    let isValid = true;
+
+    // Check if at least one field is filled
+    const hasData =
+      editFormData.name.trim() ||
+      editFormData.phone.trim() ||
+      editFormData.address.trim();
+    if (!hasData) {
+      setProfileUpdateError(
+        "Minimal harus ada satu field yang akan diupdate (nama, phone, atau alamat)"
+      );
+      return false;
+    }
+
+    // Validate name
+    if (editFormData.name.trim() && editFormData.name.trim().length === 0) {
+      errors.name = "Nama tidak boleh kosong";
+      isValid = false;
+    }
+
+    // Validate phone
+    if (editFormData.phone.trim() && !validatePhoneNumber(editFormData.phone)) {
+      errors.phone =
+        "Format nomor telepon tidak valid. Gunakan format 0xxx, 62xxx, atau +62xxx";
+      isValid = false;
+    }
+
+    setEditErrors(errors);
+    if (!isValid) {
+      setProfileUpdateError("");
+    }
+    return isValid;
+  };
+
+  const handleEditFormChange = (field: keyof EditFormData, value: string) => {
+    setEditFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+
+    // Clear specific field error when user starts typing
+    if (editErrors[field]) {
+      setEditErrors((prev) => ({
+        ...prev,
+        [field]: undefined,
+      }));
+    }
+
+    // Clear general error message
+    if (profileUpdateError) {
+      setProfileUpdateError("");
+    }
+  };
+
+  const handleEditSubmit = async () => {
+    if (!validateEditForm()) return;
+
+    setIsEditLoading(true);
+    setProfileUpdateError("");
+    setProfileUpdateSuccess("");
+
+    try {
+      // Prepare data - only send non-empty fields
+      const updateData: Partial<EditFormData> = {};
+      if (editFormData.name.trim()) updateData.name = editFormData.name.trim();
+      if (editFormData.phone.trim())
+        updateData.phone = editFormData.phone.trim();
+      if (editFormData.address.trim())
+        updateData.address = editFormData.address.trim();
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/users/profile`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${session?.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updateData),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        setProfileUpdateSuccess("Profile berhasil diupdate");
+        setShowEditDialog(false);
+        // Refresh halaman untuk update data profil
+        window.location.reload();
+      } else {
+        setProfileUpdateError(data.message || "Gagal mengupdate profile");
+      }
+    } catch (error: any) {
+      console.error("Error updating profile:", error);
+      setProfileUpdateError("Terjadi kesalahan saat mengupdate profile");
+    } finally {
+      setIsEditLoading(false);
+    }
+  };
+
+  const handleEditDialogClose = () => {
+    setShowEditDialog(false);
+    setEditErrors({});
+    setProfileUpdateError("");
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -212,8 +365,19 @@ export default function Profile() {
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         {/* Profile Information Card */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-center">Profil Pengguna</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-center flex-1">
+              Profil Pengguna
+            </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowEditDialog(true)}
+              className="flex items-center space-x-2"
+            >
+              <Edit className="w-4 h-4" />
+              <span>Edit Profil</span>
+            </Button>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Profile Picture */}
@@ -421,6 +585,91 @@ export default function Profile() {
           </Card>
         )}
       </div>
+
+      {/* Edit Profile Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={handleEditDialogClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Profil</DialogTitle>
+            <DialogDescription>Ubah informasi profil Anda.</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Name Field */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Nama</Label>
+              <Input
+                id="edit-name"
+                type="text"
+                placeholder="Masukkan nama lengkap"
+                value={editFormData.name}
+                onChange={(e) => handleEditFormChange("name", e.target.value)}
+                className={editErrors.name ? "border-red-500" : ""}
+              />
+              {editErrors.name && (
+                <p className="text-red-500 text-sm">{editErrors.name}</p>
+              )}
+            </div>
+
+            {/* Phone Field */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-phone">Nomor Telepon</Label>
+              <Input
+                id="edit-phone"
+                type="tel"
+                placeholder="Contoh: 081234567890"
+                value={editFormData.phone}
+                onChange={(e) => handleEditFormChange("phone", e.target.value)}
+                className={editErrors.phone ? "border-red-500" : ""}
+              />
+              {editErrors.phone && (
+                <p className="text-red-500 text-sm">{editErrors.phone}</p>
+              )}
+              <p className="text-gray-500 text-xs">
+                Format yang diterima: 0xxx, 62xxx, atau +62xxx
+              </p>
+            </div>
+
+            {/* Address Field */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-address">Alamat</Label>
+              <Textarea
+                id="edit-address"
+                placeholder="Masukkan alamat lengkap"
+                value={editFormData.address}
+                onChange={(e) =>
+                  handleEditFormChange("address", e.target.value)
+                }
+                className={editErrors.address ? "border-red-500" : ""}
+                rows={3}
+              />
+              {editErrors.address && (
+                <p className="text-red-500 text-sm">{editErrors.address}</p>
+              )}
+            </div>
+
+            {/* Error Message */}
+            {profileUpdateError && (
+              <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">
+                {profileUpdateError}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={handleEditDialogClose}
+              disabled={isEditLoading}
+            >
+              Batal
+            </Button>
+            <Button onClick={handleEditSubmit} disabled={isEditLoading}>
+              {isEditLoading ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
