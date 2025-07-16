@@ -56,6 +56,9 @@ export default function Profile() {
   const [profileUpdateError, setProfileUpdateError] = useState("");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showEditConfirmDialog, setShowEditConfirmDialog] = useState(false);
+  const [showResetPasswordConfirmDialog, setShowResetPasswordConfirmDialog] =
+    useState(false);
   const [isEditLoading, setIsEditLoading] = useState(false);
   const [editFormData, setEditFormData] = useState<EditFormData>({
     name: "",
@@ -101,12 +104,17 @@ export default function Profile() {
     setShowPasswordModal(false);
   };
 
-  const handleChangePassword = async () => {
+  const handleChangePassword = () => {
+    setShowResetPasswordConfirmDialog(true);
+  };
+
+  const handleConfirmResetPassword = async () => {
     if (!user?.email) return;
 
     setIsResetLoading(true);
     setResetError("");
     setResetSuccess(false);
+    setShowResetPasswordConfirmDialog(false);
 
     try {
       await resetPassword(user.email);
@@ -295,12 +303,16 @@ export default function Profile() {
     }
   };
 
-  const handleEditSubmit = async () => {
+  const handleEditSubmit = () => {
     if (!validateEditForm()) return;
+    setShowEditConfirmDialog(true);
+  };
 
+  const handleConfirmEditSubmit = async () => {
     setIsEditLoading(true);
     setProfileUpdateError("");
     setProfileUpdateSuccess("");
+    setShowEditConfirmDialog(false);
 
     try {
       // Prepare data - only send non-empty fields
@@ -365,10 +377,7 @@ export default function Profile() {
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         {/* Profile Information Card */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-center flex-1">
-              Profil Pengguna
-            </CardTitle>
+          <CardHeader className="flex flex-row items-center justify-end">
             <Button
               variant="outline"
               size="sm"
@@ -666,6 +675,64 @@ export default function Profile() {
             </Button>
             <Button onClick={handleEditSubmit} disabled={isEditLoading}>
               {isEditLoading ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Profile Confirmation Dialog */}
+      <Dialog
+        open={showEditConfirmDialog}
+        onOpenChange={setShowEditConfirmDialog}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Konfirmasi Perubahan</DialogTitle>
+            <DialogDescription>
+              Apakah Anda yakin ingin menyimpan perubahan profil ini?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowEditConfirmDialog(false)}
+              disabled={isEditLoading}
+            >
+              Batal
+            </Button>
+            <Button onClick={handleConfirmEditSubmit} disabled={isEditLoading}>
+              {isEditLoading ? "Menyimpan..." : "Ya, Simpan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Password Confirmation Dialog */}
+      <Dialog
+        open={showResetPasswordConfirmDialog}
+        onOpenChange={setShowResetPasswordConfirmDialog}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Konfirmasi Reset Password</DialogTitle>
+            <DialogDescription>
+              Apakah Anda yakin ingin mengirim link reset password ke email
+              Anda?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowResetPasswordConfirmDialog(false)}
+              disabled={isResetLoading}
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={handleConfirmResetPassword}
+              disabled={isResetLoading}
+            >
+              {isResetLoading ? "Mengirim..." : "Ya, Kirim"}
             </Button>
           </DialogFooter>
         </DialogContent>
