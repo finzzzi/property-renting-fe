@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -8,14 +7,13 @@ import {
   Plus,
   MoreHorizontal,
   Edit,
-  Home,
   Trash2,
   Loader2,
+  Home,
+  Bed,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
-import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
 import {
   Table,
   TableHeader,
@@ -39,362 +37,131 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import Pagination from "@/components/Pagination";
-
-interface Property {
-  id: number;
-  name: string;
-  description: string;
-  location: string;
-  created_at: string;
-  updated_at: string;
-  total_rooms: number;
-  category: {
-    id: number;
-    name: string;
-  };
-  city: {
-    id: number;
-    name: string;
-    type: string;
-  };
-}
-
-interface PaginationInfo {
-  current_page: number;
-  total_pages: number;
-  total_items: number;
-  items_per_page: number;
-  has_next_page: boolean;
-  has_previous_page: boolean;
-}
-
-interface PropertyResponse {
-  success: boolean;
-  message: string;
-  data: Property[];
-  pagination: PaginationInfo;
-}
+import { usePropertiesPage } from "@/hooks/usePropertiesPage";
+import PageHeader from "@/components/tenant/PageHeader";
 
 export default function PropertiesPage() {
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { session, loading: authLoading } = useAuth();
-  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [deletingProperty, setDeletingProperty] = useState<Property | null>(
-    null
-  );
-  const [submitting, setSubmitting] = useState(false);
-  const router = useRouter();
+  const {
+    properties,
+    loading,
+    error,
+    session,
+    pagination,
+    showDeleteDialog,
+    deletingProperty,
+    submitting,
+    handlePageChange,
+    handleEditProperty,
+    openDeleteDialog,
+    closeDeleteDialog,
+    handleDeleteProperty,
+  } = usePropertiesPage();
 
-  useEffect(() => {
-    if (session) {
-      fetchProperties(currentPage);
-    }
-  }, [session, currentPage]);
-
-  const fetchProperties = async (page: number = 1) => {
-    if (!session?.access_token) {
-      setError("Token authentikasi tidak ditemukan");
-      setLoading(false);
-      return;
+  const renderContent = () => {
+    if (loading) {
+      return <PropertiesSkeleton />;
     }
 
-    try {
-      setLoading(true);
-
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/tenant/properties?page=${page}`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        }
+    if (error) {
+      return (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center h-96 gap-4">
+            <Building2 className="w-12 h-12 text-muted-foreground" />
+            <h3 className="text-xl font-semibold">Terjadi Kesalahan</h3>
+            <p className="text-muted-foreground text-center">{error}</p>
+          </CardContent>
+        </Card>
       );
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error(
-            "Token tidak valid atau sudah expired. Silakan login kembali."
-          );
-        }
-        throw new Error(`Gagal mengambil data properti: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      const transformedProperties: Property[] = (data.data || []).map(
-        (p: any) => ({
-          id: p.id,
-          name: p.name,
-          description: p.description,
-          location: p.location,
-          created_at: p.created_at,
-          updated_at: p.updated_at,
-          total_rooms: Array.isArray(p.rooms) ? p.rooms.length : 0,
-          category: {
-            id: p.category_id,
-            name: p.property_categories?.name || "-",
-          },
-          city: {
-            id: p.city_id,
-            name: p.cities?.name || "-",
-            type: p.cities?.type || "",
-          },
-        })
-      );
-
-      setProperties(transformedProperties);
-
-      const apiPagination = data.pagination || {};
-
-      const itemsPerPage = transformedProperties.length;
-      const currentPage = apiPagination.current_page || 1;
-      const totalPages = apiPagination.total_pages || 1;
-      const totalItems = apiPagination.total_items || itemsPerPage;
-
-      const newPagination: PaginationInfo = {
-        current_page: currentPage,
-        total_pages: totalPages,
-        total_items: totalItems,
-        items_per_page: itemsPerPage,
-        has_next_page: currentPage < totalPages,
-        has_previous_page: currentPage > 1,
-      };
-
-      setPagination(newPagination);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
-    } finally {
-      setLoading(false);
     }
-  };
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
-
-  const handleEditProperty = (propertyId: number) => {
-    router.push(`/tenant/properties/edit/${propertyId}`);
-  };
-
-  const handleDeleteProperty = async () => {
-    if (!session?.access_token || !deletingProperty) return;
-
-    try {
-      setSubmitting(true);
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/tenant/properties/${deletingProperty.id}`,
-        {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        }
+    if (!session) {
+      return (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center h-96 gap-4">
+            <Building2 className="w-12 h-12 text-muted-foreground" />
+            <h3 className="text-xl font-semibold">Akses Ditolak</h3>
+            <p className="text-muted-foreground">
+              Silakan login untuk melihat daftar properti Anda.
+            </p>
+            <Button asChild>
+              <Link href="/login">Login</Link>
+            </Button>
+          </CardContent>
+        </Card>
       );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Gagal menghapus properti");
-      }
-
-      // Refresh properties list
-      await fetchProperties(currentPage);
-      setShowDeleteDialog(false);
-      setDeletingProperty(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
-    } finally {
-      setSubmitting(false);
     }
-  };
 
-  const openDeleteDialog = (property: Property) => {
-    setDeletingProperty(property);
-    setShowDeleteDialog(true);
-  };
-
-  const closeDeleteDialog = () => {
-    setShowDeleteDialog(false);
-    setDeletingProperty(null);
-  };
-
-  if (authLoading || loading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <Skeleton className="h-8 w-48 mb-2" />
-            <Skeleton className="h-4 w-64" />
-          </div>
-          <Skeleton className="h-10 w-40" />
-        </div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12">No</TableHead>
-              <TableHead>Nama Properti</TableHead>
-              <TableHead>Kategori</TableHead>
-              <TableHead>Kota/Kab</TableHead>
-              <TableHead>Jumlah Room</TableHead>
-              <TableHead className="w-12">Aksi</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
-              <TableRow key={i}>
-                <TableCell>
-                  <Skeleton className="h-4 w-8" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-4 w-48" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-4 w-20" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-4 w-32" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-4 w-16" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-8 w-8" />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    );
-  }
-
-  if (!session) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <Building2 className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
-          <h3 className="text-lg font-medium mb-2">Session Tidak Ditemukan</h3>
-          <p className="text-muted-foreground mb-4">
-            Silakan login kembali untuk mengakses halaman ini
-          </p>
-          <Button asChild>
-            <Link href="/login">Login</Link>
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <Building2 className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
-          <h3 className="text-lg font-medium mb-2">Terjadi Kesalahan</h3>
-          <p className="text-muted-foreground mb-4">{error}</p>
-          <Button onClick={() => fetchProperties(currentPage)}>
-            Coba Lagi
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Properti Saya</h1>
-          <p className="text-muted-foreground">
-            Kelola semua properti yang Anda miliki
-          </p>
-        </div>
-        <Button asChild>
-          <Link href="/tenant/properties/add">
-            <Plus className="mr-2 h-4 w-4" />
-            Tambah Properti
-          </Link>
-        </Button>
-      </div>
-
-      {/* Properties List */}
-      {properties.length === 0 ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <Building2 className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
-            <h3 className="text-lg font-medium mb-2">Belum Ada Properti</h3>
-            <p className="text-muted-foreground mb-4">
-              Tambahkan properti pertama Anda untuk memulai
+    if (properties.length === 0) {
+      return (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center h-96 gap-4">
+            <Home className="w-12 h-12 text-muted-foreground" />
+            <h3 className="text-xl font-semibold">Belum Ada Properti</h3>
+            <p className="text-muted-foreground">
+              Mulai dengan menambahkan properti baru Anda.
             </p>
             <Button asChild>
               <Link href="/tenant/properties/add">
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="w-4 h-4 mr-2" />
                 Tambah Properti
               </Link>
             </Button>
-          </div>
-        </div>
-      ) : (
-        <>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return (
+      <Card>
+        <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-12">No</TableHead>
                 <TableHead>Nama Properti</TableHead>
                 <TableHead>Kategori</TableHead>
-                <TableHead>Kota/Kab</TableHead>
-                <TableHead>Jumlah Room</TableHead>
-                <TableHead className="w-12">Aksi</TableHead>
+                <TableHead>Lokasi</TableHead>
+                <TableHead className="text-center">Jumlah Room</TableHead>
+                <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {properties.map((property, index) => (
-                <TableRow key={property.id}>
+              {properties.map((prop) => (
+                <TableRow key={prop.id}>
+                  <TableCell className="font-medium">{prop.name}</TableCell>
+                  <TableCell>{prop.category?.name || "-"}</TableCell>
                   <TableCell>
-                    {pagination
-                      ? pagination.items_per_page *
-                          (pagination.current_page - 1) +
-                        index +
-                        1
-                      : index + 1}
+                    {prop.city ? `${prop.city.type} ${prop.city.name}` : "-"}
                   </TableCell>
-                  <TableCell>{property.name}</TableCell>
-                  <TableCell>{property.category.name}</TableCell>
-                  <TableCell>{property.city.name}</TableCell>
-                  <TableCell>{property.total_rooms}</TableCell>
-                  <TableCell>
+                  <TableCell className="text-center">
+                    {(prop as any).total_rooms || 0}
+                  </TableCell>
+                  <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Buka menu</span>
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
-                          onClick={() => handleEditProperty(property.id)}
+                          onClick={() => handleEditProperty(prop.id)}
                         >
                           <Edit className="mr-2 h-4 w-4" />
-                          Edit Properti
+                          <span>Edit</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href="/tenant/rooms/add">
+                            <Bed className="mr-2 h-4 w-4" />
+                            <span>Tambah Room</span>
+                          </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => router.push(`/tenant/rooms/add`)}
-                        >
-                          <Home className="mr-2 h-4 w-4" />
-                          Tambah Room
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => openDeleteDialog(property)}
+                          onClick={() => openDeleteDialog(prop)}
                           className="text-red-600"
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
-                          Hapus Properti
+                          <span>Hapus</span>
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -403,31 +170,46 @@ export default function PropertiesPage() {
               ))}
             </TableBody>
           </Table>
+        </CardContent>
+      </Card>
+    );
+  };
 
-          {pagination && (
-            <Pagination
-              pagination={{
-                current_page: pagination.current_page,
-                total_pages: pagination.total_pages,
-                has_next_page: pagination.has_next_page,
-                has_prev_page: pagination.has_previous_page,
-                total_properties: pagination.total_items,
-              }}
-              onPageChange={handlePageChange}
-            />
-          )}
-        </>
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Daftar Properti"
+        description="Kelola semua properti yang Anda miliki di satu tempat."
+      >
+        <Button asChild>
+          <Link href="/tenant/properties/add">
+            <Plus className="mr-2 h-4 w-4" />
+            Tambah Properti
+          </Link>
+        </Button>
+      </PageHeader>
+
+      {renderContent()}
+
+      {pagination && pagination.total_pages > 1 && (
+        <Pagination
+          pagination={{
+            ...pagination,
+            total_properties: pagination.total_items,
+          }}
+          onPageChange={handlePageChange}
+        />
       )}
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      <Dialog open={showDeleteDialog} onOpenChange={closeDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Hapus Properti</DialogTitle>
+            <DialogTitle>Hapus Properti?</DialogTitle>
             <DialogDescription>
-              Apakah Anda yakin ingin menghapus properti "
-              {deletingProperty?.name}"? Tindakan ini tidak dapat dibatalkan dan
-              akan menghapus semua data terkait properti ini.
+              Tindakan ini tidak dapat diurungkan. Ini akan menghapus properti{" "}
+              <strong>{deletingProperty?.name}</strong> dan semua room yang
+              terkait.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -445,16 +227,66 @@ export default function PropertiesPage() {
             >
               {submitting ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Menghapus...
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menghapus...
                 </>
               ) : (
-                "Hapus Properti"
+                "Ya, Hapus"
               )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function PropertiesSkeleton() {
+  return (
+    <Card>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>
+                <Skeleton className="h-4 w-40" />
+              </TableHead>
+              <TableHead>
+                <Skeleton className="h-4 w-24" />
+              </TableHead>
+              <TableHead>
+                <Skeleton className="h-4 w-32" />
+              </TableHead>
+              <TableHead>
+                <Skeleton className="h-4 w-20" />
+              </TableHead>
+              <TableHead>
+                <Skeleton className="h-4 w-10" />
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {[...Array(5)].map((_, i) => (
+              <TableRow key={i}>
+                <TableCell>
+                  <Skeleton className="h-4 w-48" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-4 w-20" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-4 w-32" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-4 w-16" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }

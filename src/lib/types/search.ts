@@ -23,7 +23,7 @@ export interface SearchResponse {
     total_pages: number;
     total_properties: number;
     has_next_page: boolean;
-    has_prev_page: boolean;
+    has_previous_page: boolean;
   };
 }
 

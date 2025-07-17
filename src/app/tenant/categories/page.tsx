@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,7 +20,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -31,492 +29,212 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Building2,
-  Edit2,
+  Edit,
   Plus,
-  ArrowLeft,
   Loader2,
   MoreHorizontal,
   Trash2,
 } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-
-interface Category {
-  id: number;
-  name: string;
-  tenant_id?: string | null;
-}
-
-interface CategoryResponse {
-  success: boolean;
-  message: string;
-  data: Category[];
-  total: number;
-}
+import { useCategoriesPage } from "@/hooks/useCategoriesPage";
+import PageHeader from "@/components/tenant/PageHeader";
 
 export default function CategoriesPage() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [deletingCategory, setDeletingCategory] = useState<Category | null>(
-    null
-  );
-  const [categoryName, setCategoryName] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const { session, loading: authLoading } = useAuth();
-  const router = useRouter();
+  const {
+    categories,
+    loading,
+    error,
+    submitting,
+    session,
+    showAddDialog,
+    setShowAddDialog,
+    showEditDialog,
+    setShowEditDialog,
+    showDeleteDialog,
+    setShowDeleteDialog,
+    categoryName,
+    setCategoryName,
+    editingCategory,
+    deletingCategory,
+    handleAddCategory,
+    handleEditCategory,
+    handleDeleteCategory,
+    openAddDialog,
+    openEditDialog,
+    openDeleteDialog,
+    setError,
+  } = useCategoriesPage();
 
-  // Fetch categories
-  useEffect(() => {
-    const fetchCategories = async () => {
-      if (!session?.access_token) return;
-
-      try {
-        setLoading(true);
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/tenant/categories?tenant_id=${session.user.id}`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${session.access_token}`,
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Gagal mengambil data kategori");
-        }
-
-        const data: CategoryResponse = await response.json();
-        // Filter only categories that have tenant_id (not null)
-        const userCategories = data.data.filter(
-          (category) => category.tenant_id !== null
-        );
-        setCategories(userCategories);
-      } catch (err) {
-        console.error("Error fetching categories:", err);
-        setError("Gagal mengambil data kategori");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (session) {
-      fetchCategories();
+  const renderContent = () => {
+    if (loading) {
+      return <CategoriesSkeleton />;
     }
-  }, [session]);
 
-  const handleAddCategory = async () => {
-    if (!session?.access_token || !categoryName.trim()) return;
-
-    try {
-      setSubmitting(true);
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/tenant/categories`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            name: categoryName.trim(),
-            tenant_id: session.user.id,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Gagal menambahkan kategori");
-      }
-
-      // Refresh categories list
-      const updatedResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/tenant/categories?tenant_id=${session.user.id}`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        }
-      );
-
-      if (updatedResponse.ok) {
-        const updatedData: CategoryResponse = await updatedResponse.json();
-        const userCategories = updatedData.data.filter(
-          (category) => category.tenant_id !== null
-        );
-        setCategories(userCategories);
-      }
-
-      setShowAddDialog(false);
-      setCategoryName("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleEditCategory = async () => {
-    if (!session?.access_token || !editingCategory || !categoryName.trim())
-      return;
-
-    try {
-      setSubmitting(true);
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/tenant/categories/${editingCategory.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            name: categoryName.trim(),
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Gagal mengubah kategori");
-      }
-
-      // Refresh categories list
-      const updatedResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/tenant/categories?tenant_id=${session.user.id}`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        }
-      );
-
-      if (updatedResponse.ok) {
-        const updatedData: CategoryResponse = await updatedResponse.json();
-        const userCategories = updatedData.data.filter(
-          (category) => category.tenant_id !== null
-        );
-        setCategories(userCategories);
-      }
-
-      setShowEditDialog(false);
-      setEditingCategory(null);
-      setCategoryName("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleDeleteCategory = async () => {
-    if (!session?.access_token || !deletingCategory) return;
-
-    try {
-      setSubmitting(true);
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/tenant/categories/${deletingCategory.id}`,
-        {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Gagal menghapus kategori");
-      }
-
-      // Refresh categories list
-      const updatedResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/tenant/categories?tenant_id=${session.user.id}`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        }
-      );
-
-      if (updatedResponse.ok) {
-        const updatedData: CategoryResponse = await updatedResponse.json();
-        const userCategories = updatedData.data.filter(
-          (category) => category.tenant_id !== null
-        );
-        setCategories(userCategories);
-      }
-
-      setShowDeleteDialog(false);
-      setDeletingCategory(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const openEditDialog = (category: Category) => {
-    setEditingCategory(category);
-    setCategoryName(category.name);
-    setShowEditDialog(true);
-  };
-
-  const closeEditDialog = () => {
-    setShowEditDialog(false);
-    setEditingCategory(null);
-    setCategoryName("");
-  };
-
-  const closeAddDialog = () => {
-    setShowAddDialog(false);
-    setCategoryName("");
-  };
-
-  const openDeleteDialog = (category: Category) => {
-    setDeletingCategory(category);
-    setShowDeleteDialog(true);
-  };
-
-  const closeDeleteDialog = () => {
-    setShowDeleteDialog(false);
-    setDeletingCategory(null);
-  };
-
-  if (authLoading || loading) {
-    return (
-      <div className="space-y-6">
-        {/* Header Skeleton */}
-        <div className="flex items-center justify-between">
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-64" />
-            <Skeleton className="h-4 w-96" />
-          </div>
-          <Skeleton className="h-10 w-40" />
-        </div>
-
-        {/* Table Skeleton */}
+    if (error && !showAddDialog && !showEditDialog && !showDeleteDialog) {
+      return (
         <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-48" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex items-center justify-between py-4">
-                  <div className="flex items-center space-x-4">
-                    <Skeleton className="h-4 w-8" />
-                    <Skeleton className="h-4 w-48" />
-                  </div>
-                  <Skeleton className="h-8 w-16" />
-                </div>
-              ))}
-            </div>
+          <CardContent className="flex flex-col items-center justify-center h-96 gap-4">
+            <Building2 className="w-12 h-12 text-muted-foreground" />
+            <h3 className="text-xl font-semibold">Terjadi Kesalahan</h3>
+            <p className="text-muted-foreground text-center">{error}</p>
           </CardContent>
         </Card>
-      </div>
-    );
-  }
+      );
+    }
 
-  if (!session) {
+    if (!session) {
+      return (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center h-96 gap-4">
+            <Building2 className="w-12 h-12 text-muted-foreground" />
+            <h3 className="text-xl font-semibold">Akses Ditolak</h3>
+            <p className="text-muted-foreground">
+              Silakan login untuk mengelola kategori.
+            </p>
+            <Button asChild>
+              <Link href="/login">Login</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    if (categories.length === 0) {
+      return (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center h-96 gap-4">
+            <Building2 className="w-12 h-12 text-muted-foreground" />
+            <h3 className="text-xl font-semibold">Belum Ada Kategori</h3>
+            <p className="text-muted-foreground">
+              Mulai dengan menambahkan kategori properti pertama Anda.
+            </p>
+            <Button onClick={openAddDialog}>
+              <Plus className="w-4 h-4 mr-2" />
+              Tambah Kategori
+            </Button>
+          </CardContent>
+        </Card>
+      );
+    }
+
     return (
-      <div className="flex items-center justify-center min-h-64">
-        <div className="text-center">
-          <Building2 className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
-          <h3 className="text-lg font-medium mb-2">Session Tidak Ditemukan</h3>
-          <p className="text-muted-foreground mb-4">
-            Silakan login kembali untuk mengakses halaman ini
-          </p>
-          <Button asChild>
-            <Link href="/login">Login</Link>
-          </Button>
-        </div>
-      </div>
+      <Card>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nama Kategori</TableHead>
+                <TableHead className="text-right">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {categories.map((category) => (
+                <TableRow key={category.id}>
+                  <TableCell className="font-medium">{category.name}</TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Buka menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => openEditDialog(category)}
+                        >
+                          <Edit className="mr-2 h-4 w-4" />
+                          <span>Edit</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => openDeleteDialog(category)}
+                          className="text-red-600"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          <span>Hapus</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     );
-  }
+  };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Kategori Custom</h1>
-          <p className="text-muted-foreground">
-            Kelola kategori properti yang Anda buat
-          </p>
-        </div>
-        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Tambah Kategori
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Tambah Kategori Baru</DialogTitle>
-              <DialogDescription>
-                Masukkan nama kategori properti yang ingin Anda tambahkan
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="category-name">Nama Kategori</Label>
-                <Input
-                  id="category-name"
-                  placeholder="Masukkan nama kategori"
-                  value={categoryName}
-                  onChange={(e) => setCategoryName(e.target.value)}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={closeAddDialog}
-                disabled={submitting}
-              >
-                Batal
-              </Button>
-              <Button
-                onClick={handleAddCategory}
-                disabled={submitting || !categoryName.trim()}
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Menyimpan...
-                  </>
-                ) : (
-                  "Simpan Kategori"
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+      <PageHeader
+        title="Kategori Properti"
+        description="Kelola kategori untuk properti Anda."
+      >
+        <Button onClick={openAddDialog}>
+          <Plus className="mr-2 h-4 w-4" />
+          Tambah Kategori
+        </Button>
+      </PageHeader>
 
-      {/* Error Message */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-4">
-          <p className="text-red-600 text-sm">{error}</p>
-        </div>
-      )}
+      {renderContent()}
 
-      {/* Categories Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Daftar Kategori</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {categories.length === 0 ? (
-            <div className="text-center py-8">
-              <Building2 className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
-              <h3 className="text-lg font-medium mb-2">Belum Ada Kategori</h3>
-              <p className="text-muted-foreground mb-4">
-                Anda belum membuat kategori custom. Mulai dengan menambahkan
-                kategori baru.
-              </p>
-              <Button onClick={() => setShowAddDialog(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Tambah Kategori
-              </Button>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-16">No</TableHead>
-                  <TableHead>Kategori</TableHead>
-                  <TableHead className="w-32">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {categories.map((category, index) => (
-                  <TableRow key={category.id}>
-                    <TableCell className="font-medium">{index + 1}</TableCell>
-                    <TableCell>{category.name}</TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => openEditDialog(category)}
-                          >
-                            <Edit2 className="mr-2 h-4 w-4" />
-                            Edit Kategori
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => openDeleteDialog(category)}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Hapus Kategori
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Edit Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent>
+      {/* Add/Edit Dialog */}
+      <Dialog
+        open={showAddDialog || showEditDialog}
+        onOpenChange={showAddDialog ? setShowAddDialog : setShowEditDialog}
+      >
+        <DialogContent
+          className="sm:max-w-[425px]"
+          onCloseAutoFocus={() => setError(null)}
+        >
           <DialogHeader>
-            <DialogTitle>Edit Kategori</DialogTitle>
-            <DialogDescription>Ubah nama kategori properti</DialogDescription>
+            <DialogTitle>
+              {editingCategory ? "Edit Kategori" : "Tambah Kategori Baru"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingCategory
+                ? `Mengubah nama kategori "${editingCategory.name}".`
+                : "Buat kategori baru untuk properti Anda."}
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-category-name">Nama Kategori</Label>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">
+                Nama
+              </Label>
               <Input
-                id="edit-category-name"
-                placeholder="Masukkan nama kategori"
+                id="name"
                 value={categoryName}
                 onChange={(e) => setCategoryName(e.target.value)}
+                className="col-span-3"
+                placeholder="Contoh: Villa"
               />
             </div>
+            {error && (
+              <p className="text-sm text-red-500 col-span-4">{error}</p>
+            )}
           </div>
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={closeEditDialog}
-              disabled={submitting}
+              onClick={() =>
+                showAddDialog
+                  ? setShowAddDialog(false)
+                  : setShowEditDialog(false)
+              }
             >
               Batal
             </Button>
             <Button
-              onClick={handleEditCategory}
+              type="submit"
+              onClick={editingCategory ? handleEditCategory : handleAddCategory}
               disabled={submitting || !categoryName.trim()}
             >
               {submitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Menyimpan...
-                </>
-              ) : (
-                "Simpan Perubahan"
-              )}
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              {editingCategory ? "Simpan Perubahan" : "Tambah Kategori"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -524,18 +242,22 @@ export default function CategoriesPage() {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
+        <DialogContent
+          className="sm:max-w-[425px]"
+          onCloseAutoFocus={() => setError(null)}
+        >
           <DialogHeader>
-            <DialogTitle>Hapus Kategori</DialogTitle>
+            <DialogTitle>Hapus Kategori?</DialogTitle>
             <DialogDescription>
-              Apakah Anda yakin ingin menghapus kategori "
-              {deletingCategory?.name}"? Tindakan ini tidak dapat dibatalkan.
+              Tindakan ini tidak dapat diurungkan. Apakah Anda yakin ingin
+              menghapus kategori{" "}
+              <strong>&quot;{deletingCategory?.name}&quot;</strong>?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={closeDeleteDialog}
+              onClick={() => setShowDeleteDialog(false)}
               disabled={submitting}
             >
               Batal
@@ -545,18 +267,45 @@ export default function CategoriesPage() {
               onClick={handleDeleteCategory}
               disabled={submitting}
             >
-              {submitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Menghapus...
-                </>
-              ) : (
-                "Hapus Kategori"
-              )}
+              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Ya, Hapus
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function CategoriesSkeleton() {
+  return (
+    <Card>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>
+                <Skeleton className="h-4 w-40" />
+              </TableHead>
+              <TableHead className="text-right">
+                <Skeleton className="h-4 w-10 ml-auto" />
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {[...Array(5)].map((_, i) => (
+              <TableRow key={i}>
+                <TableCell>
+                  <Skeleton className="h-4 w-48" />
+                </TableCell>
+                <TableCell className="text-right">
+                  <Skeleton className="h-8 w-8 rounded-full ml-auto" />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }

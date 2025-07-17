@@ -1,10 +1,12 @@
-import React from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, Bed } from "lucide-react";
 import { SearchParams } from "@/lib/types/search";
+import { useAuth } from "@/contexts/AuthContext";
 import DateRangePicker from "./DateRangePicker";
+import BookingDialog from "./BookingDialog";
 
 interface RoomPicture {
   id: number;
@@ -39,6 +41,10 @@ const RoomList: React.FC<RoomListProps> = ({
   searchParams,
   propertyId,
 }) => {
+  const { user } = useAuth();
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -48,7 +54,13 @@ const RoomList: React.FC<RoomListProps> = ({
   };
 
   const handleBookRoom = (room: Room) => {
-    alert(`Booking kamar ${room.name} akan diimplementasikan nanti`);
+    setSelectedRoom(room);
+    setIsDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    setSelectedRoom(null);
   };
 
   if (!rooms || rooms.length === 0) {
@@ -182,6 +194,16 @@ const RoomList: React.FC<RoomListProps> = ({
           </div>
         </Card>
       ))}
+
+      {/* Booking Dialog */}
+      {selectedRoom && (
+        <BookingDialog
+          isOpen={isDialogOpen}
+          onClose={handleCloseDialog}
+          isLoggedIn={!!user}
+          roomName={selectedRoom.name}
+        />
+      )}
     </div>
   );
 };

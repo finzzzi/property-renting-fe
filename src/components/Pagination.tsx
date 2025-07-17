@@ -21,7 +21,7 @@ const Pagination: React.FC<PaginationProps> = ({
     <div className="flex justify-center items-center space-x-2 mt-8">
       <Button
         variant="outline"
-        disabled={!pagination.has_prev_page}
+        disabled={!pagination.has_previous_page}
         onClick={() => onPageChange(pagination.current_page - 1)}
       >
         Sebelumnya

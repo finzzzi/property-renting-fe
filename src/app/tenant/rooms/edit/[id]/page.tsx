@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,255 +13,31 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Save, Building2, Loader2 } from "lucide-react";
+import { ArrowLeft, Building2, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
-import { useAuth } from "@/contexts/AuthContext";
-import { useRouter, useParams } from "next/navigation";
-
-interface Room {
-  id: number;
-  name: string;
-  description: string;
-  price: number;
-  max_guests: number;
-  quantity: number;
-  property_id: number;
-  property_name: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface RoomResponse {
-  success: boolean;
-  message: string;
-  data: Room;
-}
-
-interface RoomFormData {
-  name: string;
-  description: string;
-  price: string;
-  max_guests: string;
-  quantity: string;
-}
+import { useEditRoom } from "@/hooks/useEditRoom";
 
 export default function EditRoomPage() {
-  const [room, setRoom] = useState<Room | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const { session, loading: authLoading } = useAuth();
-  const router = useRouter();
-  const params = useParams();
-  const roomId = params.id as string;
-
-  const [formData, setFormData] = useState<RoomFormData>({
-    name: "",
-    description: "",
-    price: "",
-    max_guests: "",
-    quantity: "",
-  });
-
-  const [formErrors, setFormErrors] = useState<Partial<RoomFormData>>({});
-
-  useEffect(() => {
-    if (session && roomId) {
-      fetchRoomData();
-    }
-  }, [session, roomId]);
-
-  const fetchRoomData = async () => {
-    if (!session?.access_token) {
-      setError("Token authentikasi tidak ditemukan");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/tenant/rooms/${roomId}/edit`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error(
-            "Token tidak valid atau sudah expired. Silakan login kembali."
-          );
-        }
-        if (response.status === 404) {
-          throw new Error("Room tidak ditemukan");
-        }
-        throw new Error(`Gagal mengambil data room: ${response.status}`);
-      }
-
-      const data: RoomResponse = await response.json();
-      const roomData = data.data;
-
-      setRoom(roomData);
-      setFormData({
-        name: roomData.name,
-        description: roomData.description,
-        price: roomData.price.toString(),
-        max_guests: roomData.max_guests.toString(),
-        quantity: roomData.quantity.toString(),
-      });
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const validateForm = (): boolean => {
-    const errors: Partial<RoomFormData> = {};
-
-    if (!formData.name.trim()) {
-      errors.name = "Nama room wajib diisi";
-    }
-
-    if (!formData.description.trim()) {
-      errors.description = "Deskripsi wajib diisi";
-    }
-
-    if (!formData.price || parseFloat(formData.price) <= 0) {
-      errors.price = "Harga harus lebih dari 0";
-    }
-
-    if (!formData.max_guests || parseInt(formData.max_guests) <= 0) {
-      errors.max_guests = "Jumlah tamu maksimal harus lebih dari 0";
-    }
-
-    if (!formData.quantity || parseInt(formData.quantity) <= 0) {
-      errors.quantity = "Jumlah room harus lebih dari 0";
-    }
-
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleInputChange = (field: keyof RoomFormData, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-
-    // Clear error for this field
-    if (formErrors[field]) {
-      setFormErrors((prev) => ({
-        ...prev,
-        [field]: undefined,
-      }));
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
-    if (!session?.access_token) {
-      setError("Token authentikasi tidak ditemukan");
-      return;
-    }
-
-    // Clear error and show confirmation dialog
-    setError(null);
-    setShowConfirmDialog(true);
-  };
-
-  const handleConfirmSubmit = async () => {
-    setShowConfirmDialog(false);
-
-    if (!session?.access_token) {
-      setError("Token authentikasi tidak ditemukan");
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-      setError(null);
-
-      const requestBody = {
-        name: formData.name.trim(),
-        description: formData.description.trim(),
-        price: parseFloat(formData.price),
-        max_guests: parseInt(formData.max_guests),
-        quantity: parseInt(formData.quantity),
-      };
-
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/tenant/rooms/${roomId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify(requestBody),
-        }
-      );
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error(
-            "Token tidak valid atau sudah expired. Silakan login kembali."
-          );
-        }
-        const errorData = await response.json();
-        throw new Error(
-          errorData.message || `Gagal mengupdate room: ${response.status}`
-        );
-      }
-
-      // Redirect to rooms list on success
-      router.push("/tenant/rooms");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const formatPrice = (value: string) => {
-    // Remove non-numeric characters except decimal point
-    const numericValue = value.replace(/[^\d]/g, "");
-
-    if (!numericValue) return "";
-
-    // Format as currency
-    return new Intl.NumberFormat("id-ID").format(parseInt(numericValue));
-  };
-
-  const handlePriceChange = (value: string) => {
-    // Store raw numeric value
-    const numericValue = value.replace(/[^\d]/g, "");
-    setFormData((prev) => ({
-      ...prev,
-      price: numericValue,
-    }));
-
-    // Clear error
-    if (formErrors.price) {
-      setFormErrors((prev) => ({
-        ...prev,
-        price: undefined,
-      }));
-    }
-  };
+  const {
+    room,
+    loading,
+    submitting,
+    error,
+    showConfirmDialog,
+    setShowConfirmDialog,
+    authLoading,
+    session,
+    formData,
+    formErrors,
+    handleInputChange,
+    handleSubmit,
+    handleConfirmSubmit,
+    fetchRoomData,
+    formatPrice,
+    handlePriceChange,
+    router,
+  } = useEditRoom();
 
   if (authLoading || loading) {
     return (
@@ -296,9 +71,9 @@ export default function EditRoomPage() {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <Building2 className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
-          <h3 className="text-lg font-medium mb-2">Session Tidak Ditemukan</h3>
+          <h3 className="text-lg font-medium mb-2">Sesi Tidak Ditemukan</h3>
           <p className="text-muted-foreground mb-4">
-            Silakan login kembali untuk mengakses halaman ini
+            Silakan login kembali untuk mengakses halaman ini.
           </p>
           <Button asChild>
             <Link href="/login">Login</Link>
@@ -316,7 +91,7 @@ export default function EditRoomPage() {
           <h3 className="text-lg font-medium mb-2">Terjadi Kesalahan</h3>
           <p className="text-muted-foreground mb-4">{error}</p>
           <div className="space-x-2">
-            <Button onClick={() => fetchRoomData()}>Coba Lagi</Button>
+            <Button onClick={fetchRoomData}>Coba Lagi</Button>
             <Button variant="outline" asChild>
               <Link href="/tenant/rooms">Kembali ke Daftar Room</Link>
             </Button>
@@ -432,7 +207,7 @@ export default function EditRoomPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="quantity">
-                  Room Quantity <span className="text-red-500">*</span>
+                  Jumlah Room <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="quantity"

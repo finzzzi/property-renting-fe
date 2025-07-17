@@ -35,9 +35,9 @@ import {
   MoreVertical,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, Suspense } from "react";
 import PasswordSetupModal from "@/components/PasswordSetupModal";
-import { createClient } from "@/lib/supabase/client";
+import { useProfilePicture } from "@/hooks/useProfilePicture";
 
 interface EditFormData {
   name: string;
@@ -45,18 +45,20 @@ interface EditFormData {
   address: string;
 }
 
-export default function Profile() {
+function ProfileContent() {
   const { user, userProfile, session, loading, resetPassword } = useAuth();
   const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // States for various functionalities
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [isResetLoading, setIsResetLoading] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
   const [resetError, setResetError] = useState("");
-  const [isUploadLoading, setIsUploadLoading] = useState(false);
-  const [isDeleteLoading, setIsDeleteLoading] = useState(false);
-  const [profileUpdateSuccess, setProfileUpdateSuccess] = useState("");
   const [profileUpdateError, setProfileUpdateError] = useState("");
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [profileUpdateSuccess, setProfileUpdateSuccess] = useState(""); // Keep for edit success
+
+  // Dialog states
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showEditConfirmDialog, setShowEditConfirmDialog] = useState(false);
   const [showResetPasswordConfirmDialog, setShowResetPasswordConfirmDialog] =
@@ -64,40 +66,57 @@ export default function Profile() {
   const [showChangeEmailDialog, setShowChangeEmailDialog] = useState(false);
   const [showChangeEmailConfirmDialog, setShowChangeEmailConfirmDialog] =
     useState(false);
+
+  // Edit form states
   const [isEditLoading, setIsEditLoading] = useState(false);
-  const [isChangeEmailLoading, setIsChangeEmailLoading] = useState(false);
-  const [newEmail, setNewEmail] = useState("");
-  const [changeEmailError, setChangeEmailError] = useState("");
-  const [changeEmailSuccess, setChangeEmailSuccess] = useState("");
   const [editFormData, setEditFormData] = useState<EditFormData>({
     name: "",
     phone: "",
     address: "",
   });
   const [editErrors, setEditErrors] = useState<Partial<EditFormData>>({});
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const router = useRouter();
 
+  // Change email states
+  const [isChangeEmailLoading, setIsChangeEmailLoading] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [changeEmailError, setChangeEmailError] = useState("");
+  const [changeEmailSuccess, setChangeEmailSuccess] = useState("");
+
+  // Refactored profile picture logic into a custom hook
+  const {
+    isUploadLoading,
+    isDeleteLoading,
+    statusMessage: pictureStatus,
+    showDeleteDialog,
+    setShowDeleteDialog,
+    fileInputRef,
+    handleUploadClick,
+    handleFileUpload,
+    handleDeleteProfilePicture,
+  } = useProfilePicture(() => {
+    // On success, reload the page to show the updated picture
+    window.location.reload();
+  }, userProfile);
+
+  // Effect to redirect if not logged in
   useEffect(() => {
     if (!user && !loading) {
       router.push("/login");
     }
   }, [user, loading, router]);
 
+  // Effect to show password setup modal if needed
   useEffect(() => {
-    if (user && user.app_metadata) {
+    if (user?.app_metadata) {
       const hasPassword = user.app_metadata.has_password;
       const provider = user.app_metadata.provider;
-
       if (provider === "email" && !hasPassword) {
         setShowPasswordModal(true);
-      } else {
-        setShowPasswordModal(false);
       }
     }
   }, [user]);
 
-  // Initialize edit form data when profile is loaded or dialog opens
+  // Effect to initialize edit form data
   useEffect(() => {
     if (userProfile && showEditDialog) {
       setEditFormData({
@@ -109,226 +128,68 @@ export default function Profile() {
     }
   }, [userProfile, showEditDialog]);
 
-  // Handle email change confirmation from URL parameter
+  // Effect to handle email change confirmation message
   useEffect(() => {
     const emailChanged = searchParams.get("email_changed");
     if (emailChanged === "true") {
       setChangeEmailSuccess(
         "Email berhasil diubah! Silakan login kembali jika diperlukan."
       );
-      // Clear the URL parameter
       const url = new URL(window.location.href);
       url.searchParams.delete("email_changed");
       window.history.replaceState({}, "", url.pathname);
     }
   }, [searchParams]);
 
-  const handlePasswordModalClose = () => {
-    setShowPasswordModal(false);
-  };
+  const handlePasswordModalClose = () => setShowPasswordModal(false);
 
-  const handleChangePassword = () => {
-    setShowResetPasswordConfirmDialog(true);
-  };
+  const handleChangePassword = () => setShowResetPasswordConfirmDialog(true);
 
   const handleConfirmResetPassword = async () => {
     if (!user?.email) return;
-
     setIsResetLoading(true);
     setResetError("");
     setResetSuccess(false);
     setShowResetPasswordConfirmDialog(false);
-
     try {
       await resetPassword(user.email);
       setResetSuccess(true);
     } catch (error: any) {
-      console.error("Error sending reset password email:", error);
-      setResetError(
-        "Terjadi kesalahan saat mengirim email reset password. Silakan coba lagi."
-      );
+      setResetError("Terjadi kesalahan saat mengirim email reset password.");
     } finally {
       setIsResetLoading(false);
     }
   };
 
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
+  // --- All profile picture logic is now in useProfilePicture hook ---
 
-  const handleFileUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // Validasi file
-    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif"];
-    if (!allowedTypes.includes(file.type)) {
-      setProfileUpdateError(
-        "Format file tidak didukung. Gunakan JPG, PNG, atau GIF."
-      );
-      return;
-    }
-
-    const maxSize = 1 * 1024 * 1024; // 1MB
-    if (file.size > maxSize) {
-      setProfileUpdateError("Ukuran file terlalu besar. Maksimal 1MB.");
-      return;
-    }
-
-    setIsUploadLoading(true);
-    setProfileUpdateError("");
-    setProfileUpdateSuccess("");
-
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/pictures/profile/upload`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${session?.access_token}`,
-          },
-          body: formData,
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.success) {
-        setProfileUpdateSuccess("Foto profil berhasil diupload");
-        // Refresh halaman untuk update foto profil
-        window.location.reload();
-      } else {
-        setProfileUpdateError(data.message || "Gagal mengupload foto profil");
-      }
-    } catch (error: any) {
-      console.error("Error uploading profile picture:", error);
-      setProfileUpdateError("Terjadi kesalahan saat mengupload foto profil");
-    } finally {
-      setIsUploadLoading(false);
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    }
-  };
-
-  const handleDeleteProfilePicture = async () => {
-    if (!userProfile?.profile_picture) return;
-
-    setIsDeleteLoading(true);
-    setProfileUpdateError("");
-    setProfileUpdateSuccess("");
-    setShowDeleteDialog(false);
-
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/pictures/profile/delete`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${session?.access_token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.success) {
-        setProfileUpdateSuccess("Foto profil berhasil dihapus");
-        // Refresh halaman untuk update foto profil
-        window.location.reload();
-      } else {
-        setProfileUpdateError(data.message || "Gagal menghapus foto profil");
-      }
-    } catch (error: any) {
-      console.error("Error deleting profile picture:", error);
-      setProfileUpdateError("Terjadi kesalahan saat menghapus foto profil");
-    } finally {
-      setIsDeleteLoading(false);
-    }
-  };
-
+  // --- Edit Profile Logic ---
   const validatePhoneNumber = (phone: string): boolean => {
     if (!phone) return true; // Optional field
-
-    // Remove all spaces and dashes
-    const cleanPhone = phone.replace(/[\s-]/g, "");
-
-    // Check format patterns
-    const patterns = [
-      /^0\d{7,12}$/, // 0812345678 (8-13 digits total)
-      /^62\d{8,12}$/, // 62812345678 (10-14 digits total)
-      /^\+62\d{8,12}$/, // +62812345678 (11-15 chars total)
-    ];
-
-    return patterns.some((pattern) => pattern.test(cleanPhone));
+    const phoneRegex = /^(0|62|\+62)8[1-9][0-9]{7,10}$/;
+    return phoneRegex.test(phone);
   };
 
   const validateEditForm = (): boolean => {
     const errors: Partial<EditFormData> = {};
-    let isValid = true;
-
-    // Check if at least one field is filled
-    const hasData =
-      editFormData.name.trim() ||
-      editFormData.phone.trim() ||
-      editFormData.address.trim();
-    if (!hasData) {
-      setProfileUpdateError(
-        "Minimal harus ada satu field yang akan diupdate (nama, phone, atau alamat)"
-      );
-      return false;
+    if (!editFormData.name) {
+      errors.name = "Nama tidak boleh kosong.";
     }
-
-    // Validate name
-    if (editFormData.name.trim() && editFormData.name.trim().length === 0) {
-      errors.name = "Nama tidak boleh kosong";
-      isValid = false;
+    if (editFormData.phone && !validatePhoneNumber(editFormData.phone)) {
+      errors.phone = "Format nomor telepon tidak valid.";
     }
-
-    // Validate phone
-    if (editFormData.phone.trim() && !validatePhoneNumber(editFormData.phone)) {
-      errors.phone =
-        "Format nomor telepon tidak valid. Gunakan format 0xxx, 62xxx, atau +62xxx";
-      isValid = false;
-    }
-
     setEditErrors(errors);
-    if (!isValid) {
-      setProfileUpdateError("");
-    }
-    return isValid;
+    return Object.keys(errors).length === 0;
   };
 
   const handleEditFormChange = (field: keyof EditFormData, value: string) => {
-    setEditFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-
-    // Clear specific field error when user starts typing
-    if (editErrors[field]) {
-      setEditErrors((prev) => ({
-        ...prev,
-        [field]: undefined,
-      }));
-    }
-
-    // Clear general error message
-    if (profileUpdateError) {
-      setProfileUpdateError("");
-    }
+    setEditFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleEditSubmit = () => {
-    if (!validateEditForm()) return;
-    setShowEditConfirmDialog(true);
+    if (validateEditForm()) {
+      setShowEditConfirmDialog(true);
+    }
   };
 
   const handleConfirmEditSubmit = async () => {
@@ -338,7 +199,7 @@ export default function Profile() {
     setShowEditConfirmDialog(false);
 
     try {
-      // Prepare data - only send non-empty fields
+      // Prepare data to send
       const updateData: Partial<EditFormData> = {};
       if (editFormData.name.trim()) updateData.name = editFormData.name.trim();
       if (editFormData.phone.trim())
@@ -361,16 +222,16 @@ export default function Profile() {
       const data = await response.json();
 
       if (data.success) {
-        setProfileUpdateSuccess("Profile berhasil diupdate");
+        setProfileUpdateSuccess("Profil berhasil diperbarui!");
         setShowEditDialog(false);
-        // Refresh halaman untuk update data profil
+        // Refresh halaman untuk menampilkan data terbaru
         window.location.reload();
       } else {
-        setProfileUpdateError(data.message || "Gagal mengupdate profile");
+        setProfileUpdateError(data.message || "Gagal memperbarui profil.");
       }
     } catch (error: any) {
       console.error("Error updating profile:", error);
-      setProfileUpdateError("Terjadi kesalahan saat mengupdate profile");
+      setProfileUpdateError("Terjadi kesalahan saat memperbarui profil.");
     } finally {
       setIsEditLoading(false);
     }
@@ -379,9 +240,9 @@ export default function Profile() {
   const handleEditDialogClose = () => {
     setShowEditDialog(false);
     setEditErrors({});
-    setProfileUpdateError("");
   };
 
+  // --- Change Email Logic ---
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
@@ -389,24 +250,19 @@ export default function Profile() {
 
   const handleChangeEmail = () => {
     setShowChangeEmailDialog(true);
+    setNewEmail("");
+    setChangeEmailError("");
   };
 
   const handleChangeEmailSubmit = () => {
-    if (!newEmail.trim()) {
-      setChangeEmailError("Email baru harus diisi");
-      return;
-    }
-
     if (!validateEmail(newEmail)) {
-      setChangeEmailError("Format email tidak valid");
+      setChangeEmailError("Format email tidak valid.");
       return;
     }
-
     if (newEmail === user?.email) {
-      setChangeEmailError("Email baru tidak boleh sama dengan email saat ini");
+      setChangeEmailError("Email baru tidak boleh sama dengan email lama.");
       return;
     }
-
     setShowChangeEmailConfirmDialog(true);
   };
 
@@ -417,7 +273,9 @@ export default function Profile() {
     setShowChangeEmailConfirmDialog(false);
 
     try {
+      const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
+
       const { error } = await supabase.auth.updateUser(
         {
           email: newEmail,
@@ -450,554 +308,553 @@ export default function Profile() {
     setChangeEmailError("");
   };
 
+  const canChangePassword = user?.app_metadata?.provider === "email";
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+      <div className="bg-gray-50 min-h-screen">
+        <div className="container mx-auto max-w-6xl px-4 py-8">
+          <header className="mb-8">
+            {/* Header Skeleton */}
+            <div className="h-8 bg-gray-200 rounded-md w-48 mb-2 animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded-md w-96 animate-pulse"></div>
+          </header>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            {/* Profile Card Skeleton */}
+            <div>
+              <div className="bg-white rounded-lg shadow-lg p-6">
+                {/* Edit Button Skeleton */}
+                <div className="flex justify-end mb-4">
+                  <div className="h-9 w-28 bg-gray-200 rounded-md animate-pulse"></div>
+                </div>
+
+                {/* Profile Picture Skeleton */}
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-32 h-32 bg-gray-200 rounded-full mb-4 animate-pulse"></div>
+
+                  {/* Name and Email Skeleton */}
+                  <div className="h-7 bg-gray-200 rounded-md w-48 mb-2 animate-pulse"></div>
+                  <div className="h-4 bg-gray-200 rounded-md w-36 mb-6 animate-pulse"></div>
+                </div>
+
+                {/* User Info Skeleton */}
+                <div className="space-y-4">
+                  {[1, 2, 3, 4].map((item) => (
+                    <div key={item} className="flex items-start space-x-3">
+                      <div className="w-5 h-5 bg-gray-200 rounded mt-1 animate-pulse"></div>
+                      <div className="flex-1">
+                        <div className="h-4 bg-gray-200 rounded-md w-20 mb-1 animate-pulse"></div>
+                        <div className="h-5 bg-gray-200 rounded-md w-32 animate-pulse"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Security Card Skeleton */}
+            <div className="space-y-8">
+              <div className="bg-white rounded-lg shadow-lg p-6">
+                {/* Card Title Skeleton */}
+                <div className="h-6 bg-gray-200 rounded-md w-40 mb-6 animate-pulse"></div>
+
+                {/* Security Options Skeleton */}
+                <div className="space-y-6">
+                  {[1, 2].map((item) => (
+                    <div key={item}>
+                      <div className="h-4 bg-gray-200 rounded-md w-24 mb-2 animate-pulse"></div>
+                      <div className="flex items-center justify-between">
+                        <div className="h-4 bg-gray-200 rounded-md w-64 animate-pulse"></div>
+                        <div className="h-9 w-32 bg-gray-200 rounded-md animate-pulse"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
-  // Show set password for new users
-  const hasPassword = user?.app_metadata?.has_password;
-  const provider = user?.app_metadata?.provider;
-  const canChangePassword = provider === "email" && hasPassword;
-
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-        {/* Profile Information Card */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-end">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowEditDialog(true)}
-              className="flex items-center space-x-2"
-            >
-              <Edit className="w-4 h-4" />
-              <span>Edit Profil</span>
-            </Button>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Profile Picture */}
-            <div className="flex justify-center">
-              <div className="relative group">
-                {userProfile?.profile_picture ? (
-                  <div className="relative">
-                    <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-200">
-                      <Image
-                        src={userProfile.profile_picture}
-                        alt="Profile"
-                        width={96}
-                        height={96}
-                        className="w-full h-full object-cover"
+    <div className="bg-gray-50 min-h-screen">
+      <div className="container mx-auto max-w-6xl px-4 py-8">
+        <PasswordSetupModal
+          isOpen={showPasswordModal}
+          onClose={handlePasswordModalClose}
+        />
+
+        <header className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-800">Profil Saya</h1>
+          <p className="text-gray-500">
+            Kelola informasi profil, preferensi, dan keamanan akun Anda.
+          </p>
+        </header>
+
+        {!loading && (!user || !userProfile) ? (
+          <div className="text-center"></div>
+        ) : !loading && user && userProfile ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            <div>
+              <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
+                <CardHeader className="relative">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowEditDialog(true)}
+                    className="absolute right-4 flex items-center space-x-2"
+                  >
+                    <Edit className="w-4 h-4" />
+                    <span>Edit Profil</span>
+                  </Button>
+                  <div className="flex flex-col items-center text-center pt-8">
+                    <div className="relative group w-32 h-32 mb-4">
+                      {userProfile.profile_picture ? (
+                        <Image
+                          src={userProfile.profile_picture}
+                          alt="Profile Picture"
+                          width={128}
+                          height={128}
+                          className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-md"
+                        />
+                      ) : (
+                        <div className="w-32 h-32 rounded-full bg-gray-200 border-4 border-white shadow-md flex items-center justify-center">
+                          <User className="w-16 h-16 text-gray-500" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-white rounded-full"
+                            >
+                              <MoreVertical />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            <DropdownMenuItem
+                              onSelect={handleUploadClick}
+                              disabled={isUploadLoading}
+                            >
+                              <Upload className="mr-2 h-4 w-4" />
+                              {isUploadLoading
+                                ? "Mengunggah..."
+                                : "Ubah Foto Profil"}
+                            </DropdownMenuItem>
+                            {userProfile.profile_picture && (
+                              <DropdownMenuItem
+                                onSelect={() => setShowDeleteDialog(true)}
+                                className="text-red-500"
+                                disabled={isDeleteLoading}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                {isDeleteLoading
+                                  ? "Menghapus..."
+                                  : "Hapus Foto Profil"}
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileUpload}
+                        className="hidden"
+                        accept="image/jpeg,image/png,image/gif"
                       />
                     </div>
-                    {/* Edit button overlay */}
-                    <div className="absolute inset-0 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            className="p-2 bg-white/90 hover:bg-white rounded-full"
-                            disabled={isUploadLoading || isDeleteLoading}
-                          >
-                            {isUploadLoading || isDeleteLoading ? (
-                              <div className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></div>
-                            ) : (
-                              <Edit className="w-4 h-4 text-gray-700" />
-                            )}
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="center" className="w-48">
-                          <DropdownMenuItem
-                            onClick={handleUploadClick}
-                            className="cursor-pointer"
-                          >
-                            <Camera className="w-4 h-4 mr-2" />
-                            Ubah Foto Profil
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => setShowDeleteDialog(true)}
-                            className="cursor-pointer text-red-600 focus:text-red-600"
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Hapus Foto Profil
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                    <CardTitle className="text-2xl font-semibold text-gray-900">
+                      {userProfile.name || "Nama Belum Diatur"}
+                    </CardTitle>
+                    <p className="text-sm text-gray-500">{user.email}</p>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {(pictureStatus.error || pictureStatus.success) && (
+                    <div
+                      className={`p-3 rounded-md text-sm mb-4 ${
+                        pictureStatus.error
+                          ? "bg-red-100 text-red-700"
+                          : "bg-green-100 text-green-700"
+                      }`}
+                    >
+                      {pictureStatus.error || pictureStatus.success}
+                    </div>
+                  )}
+                  <div className="space-y-3">
+                    <div className="flex items-start space-x-3">
+                      <Phone className="w-5 h-5 text-gray-500 mt-1" />
+                      <div>
+                        <p className="text-sm text-gray-500">Telepon</p>
+                        <p className="font-medium text-gray-800">
+                          {userProfile.phone || "Belum diatur"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <MapPin className="w-5 h-5 text-gray-500 mt-1" />
+                      <div>
+                        <p className="text-sm text-gray-500">Alamat</p>
+                        <p className="font-medium text-gray-800">
+                          {userProfile.address || "Belum diatur"}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                ) : (
-                  <div className="relative">
-                    <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center">
-                      <User className="w-12 h-12 text-gray-400" />
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="space-y-8">
+              <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
+                <CardHeader>
+                  <CardTitle>Keamanan Akun</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {canChangePassword && (
+                    <div>
+                      <Label>Kata Sandi</Label>
+                      <div className="flex items-center justify-between">
+                        <p className="text-gray-600">
+                          Atur ulang kata sandi Anda melalui email.
+                        </p>
+                        <Button
+                          onClick={handleChangePassword}
+                          variant="outline"
+                          disabled={isResetLoading}
+                        >
+                          {isResetLoading ? "Mengirim..." : "Ubah Kata Sandi"}
+                        </Button>
+                      </div>
+                      {resetSuccess && (
+                        <p className="text-green-600 mt-2">
+                          Email reset kata sandi telah dikirim.
+                        </p>
+                      )}
+                      {resetError && (
+                        <p className="text-red-600 mt-2">{resetError}</p>
+                      )}
                     </div>
-                    {/* Upload button overlay */}
-                    <div className="absolute inset-0 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={handleUploadClick}
-                        disabled={isUploadLoading}
-                        className="p-2 bg-white/90 hover:bg-white rounded-full"
-                      >
-                        {isUploadLoading ? (
-                          <div className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></div>
-                        ) : (
-                          <Upload className="w-4 h-4 text-gray-700" />
-                        )}
+                  )}
+                  <div>
+                    <Label>Ubah Email</Label>
+                    <div className="flex items-center justify-between">
+                      <p className="text-gray-600">
+                        Ubah alamat email yang terhubung dengan akun Anda.
+                      </p>
+                      <Button onClick={handleChangeEmail} variant="outline">
+                        Ubah Email
                       </Button>
                     </div>
+                    {changeEmailSuccess && (
+                      <p className="text-green-600 mt-2">
+                        {changeEmailSuccess}
+                      </p>
+                    )}
+                    {changeEmailError && (
+                      <p className="text-red-600 mt-2">{changeEmailError}</p>
+                    )}
                   </div>
-                )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        ) : null}
 
-                {/* Hidden file input */}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/gif"
-                  onChange={handleFileUpload}
-                  className="hidden"
+        {/* Dialogs */}
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Konfirmasi Hapus Foto Profil</DialogTitle>
+              <DialogDescription>
+                Tindakan ini tidak dapat dibatalkan. Yakin?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteDialog(false)}
+              >
+                Batal
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteProfilePicture}
+                disabled={isDeleteLoading}
+              >
+                {isDeleteLoading ? "Menghapus..." : "Hapus"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Profile Dialog */}
+        <Dialog open={showEditDialog} onOpenChange={handleEditDialogClose}>
+          <DialogContent className="max-w-md ">
+            <DialogHeader>
+              <DialogTitle>Edit Profil</DialogTitle>
+              <DialogDescription>
+                Ubah informasi profil Anda di bawah ini.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              {/* Name Field */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Nama Lengkap</Label>
+                <Input
+                  id="edit-name"
+                  type="text"
+                  placeholder="Masukkan nama lengkap"
+                  value={editFormData.name}
+                  onChange={(e) => handleEditFormChange("name", e.target.value)}
+                  className={editErrors.name ? "border-red-500" : ""}
+                />
+                {editErrors.name && (
+                  <p className="text-red-500 text-sm">{editErrors.name}</p>
+                )}
+              </div>
+
+              {/* Phone Field */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-phone">Nomor Telepon</Label>
+                <Input
+                  id="edit-phone"
+                  type="tel"
+                  placeholder="Contoh: 081234567890"
+                  value={editFormData.phone}
+                  onChange={(e) =>
+                    handleEditFormChange("phone", e.target.value)
+                  }
+                  className={editErrors.phone ? "border-red-500" : ""}
+                />
+                {editErrors.phone && (
+                  <p className="text-red-500 text-sm">{editErrors.phone}</p>
+                )}
+                <p className="text-gray-500 text-xs">
+                  Format: 08xx, 62xx, atau +62xx
+                </p>
+              </div>
+
+              {/* Address Field */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-address">Alamat</Label>
+                <Textarea
+                  id="edit-address"
+                  placeholder="Masukkan alamat lengkap"
+                  value={editFormData.address}
+                  onChange={(e) =>
+                    handleEditFormChange("address", e.target.value)
+                  }
+                  className={editErrors.address ? "border-red-500" : ""}
+                  rows={3}
+                />
+                {editErrors.address && (
+                  <p className="text-red-500 text-sm">{editErrors.address}</p>
+                )}
+              </div>
+
+              {/* Error Message */}
+              {profileUpdateError && (
+                <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">
+                  {profileUpdateError}
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={handleEditDialogClose}
+                disabled={isEditLoading}
+              >
+                Batal
+              </Button>
+              <Button onClick={handleEditSubmit} disabled={isEditLoading}>
+                {isEditLoading ? "Menyimpan..." : "Simpan Perubahan"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Confirmation Dialog */}
+        <Dialog
+          open={showEditConfirmDialog}
+          onOpenChange={setShowEditConfirmDialog}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Konfirmasi Perubahan</DialogTitle>
+              <DialogDescription>
+                Apakah Anda yakin ingin menyimpan perubahan profil ini?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowEditConfirmDialog(false)}
+                disabled={isEditLoading}
+              >
+                Batal
+              </Button>
+              <Button
+                onClick={handleConfirmEditSubmit}
+                disabled={isEditLoading}
+              >
+                {isEditLoading ? "Menyimpan..." : "Ya, Simpan"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Reset Password Confirmation Dialog */}
+        <Dialog
+          open={showResetPasswordConfirmDialog}
+          onOpenChange={setShowResetPasswordConfirmDialog}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Konfirmasi Reset Password</DialogTitle>
+              <DialogDescription>
+                Apakah Anda yakin ingin mengirim link reset password ke email
+                Anda?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowResetPasswordConfirmDialog(false)}
+                disabled={isResetLoading}
+              >
+                Batal
+              </Button>
+              <Button
+                onClick={handleConfirmResetPassword}
+                disabled={isResetLoading}
+              >
+                {isResetLoading ? "Mengirim..." : "Ya, Kirim"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Change Email Dialog */}
+        <Dialog
+          open={showChangeEmailDialog}
+          onOpenChange={handleChangeEmailDialogClose}
+        >
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Ubah Alamat Email</DialogTitle>
+              <DialogDescription>
+                Masukkan alamat email baru. Link konfirmasi akan dikirim ke
+                email baru Anda.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="current-email">Email Saat Ini</Label>
+                <Input
+                  id="current-email"
+                  type="email"
+                  value={user?.email || ""}
+                  disabled
+                  className="bg-gray-50"
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="new-email">Email Baru</Label>
+                <Input
+                  id="new-email"
+                  type="email"
+                  placeholder="Masukkan email baru"
+                  value={newEmail}
+                  onChange={(e) => {
+                    setNewEmail(e.target.value);
+                    setChangeEmailError("");
+                  }}
+                  className={changeEmailError ? "border-red-500" : ""}
+                />
+              </div>
+
+              {changeEmailError && (
+                <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">
+                  {changeEmailError}
+                </div>
+              )}
             </div>
 
-            {/* Profile Update Messages */}
-            {profileUpdateSuccess && (
-              <div className="flex items-center space-x-2 text-green-600 bg-green-50 p-3 rounded-md justify-center">
-                <Check className="w-4 h-4" />
-                <span className="text-sm">{profileUpdateSuccess}</span>
-              </div>
-            )}
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={handleChangeEmailDialogClose}
+                disabled={isChangeEmailLoading}
+              >
+                Batal
+              </Button>
+              <Button
+                onClick={handleChangeEmailSubmit}
+                disabled={isChangeEmailLoading}
+              >
+                Lanjutkan
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-            {profileUpdateError && (
-              <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">
-                {profileUpdateError}
-              </div>
-            )}
-
-            {/* User Info */}
-            <div className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <User className="w-5 h-5 text-gray-500" />
-                <div>
-                  <p className="text-sm text-gray-500">Nama</p>
-                  <p className="font-medium">
-                    {userProfile?.name || "Belum diatur"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-3">
-                <Mail className="w-5 h-5 text-gray-500" />
-                <div>
-                  <p className="text-sm text-gray-500">Email</p>
-                  <p className="font-medium">{user?.email}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-3">
-                <User className="w-5 h-5 text-gray-500" />
-                <div>
-                  <p className="text-sm text-gray-500">Jenis Akun</p>
-                  <p className="font-medium capitalize">
-                    {userProfile?.role === "traveler" ? "Traveler" : "Tenant"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-3">
-                <Phone className="w-5 h-5 text-gray-500" />
-                <div>
-                  <p className="text-sm text-gray-500">Nomor Telepon</p>
-                  <p className="font-medium">
-                    {userProfile?.phone || "Belum diatur"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-3">
-                <MapPin className="w-5 h-5 text-gray-500" />
-                <div>
-                  <p className="text-sm text-gray-500">Alamat</p>
-                  <p className="font-medium">
-                    {userProfile?.address || "Belum diatur"}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Settings Card */}
-        {canChangePassword && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Lock className="w-5 h-5" />
-                <span>Pengaturan</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex gap-2 items-center justify-between">
-                  <div>
-                    <h3 className="font-medium">Password</h3>
-                    <p className="text-sm text-gray-500">
-                      Kirim link reset password ke email Anda
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    onClick={handleChangePassword}
-                    disabled={isResetLoading}
-                    className="flex items-center space-x-2"
-                  >
-                    <Lock className="w-4 h-4" />
-                    <span>
-                      {isResetLoading ? "Mengirim..." : "Reset Password"}
-                    </span>
-                  </Button>
-                </div>
-
-                {/* Success Message */}
-                {resetSuccess && (
-                  <div className="flex items-center space-x-2 text-green-600 bg-gray-100 p-3 rounded-md justify-center">
-                    <span className="text-sm">
-                      Link reset password telah dikirim ke email Anda.
-                    </span>
-                  </div>
-                )}
-
-                {/* Error Message */}
-                {resetError && (
-                  <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">
-                    {resetError}
-                  </div>
-                )}
-
-                {/* Change Email Section */}
-                <div className="flex gap-2 items-center justify-between pt-4 border-t">
-                  <div>
-                    <h3 className="font-medium">Alamat Email</h3>
-                    <p className="text-sm text-gray-500">
-                      Ubah alamat email akun Anda
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    onClick={handleChangeEmail}
-                    disabled={isChangeEmailLoading}
-                    className="flex items-center space-x-2"
-                  >
-                    <Mail className="w-4 h-4" />
-                    <span>
-                      {isChangeEmailLoading ? "Memproses..." : "Ubah Email"}
-                    </span>
-                  </Button>
-                </div>
-
-                {/* Change Email Success Message */}
-                {changeEmailSuccess && (
-                  <div className="text-green-600 bg-green-50 p-3 rounded-md">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Check className="w-4 h-4" />
-                      <span className="text-sm font-medium">Berhasil!</span>
-                    </div>
-                    <div className="text-sm whitespace-pre-line">
-                      {changeEmailSuccess}
-                    </div>
-                  </div>
-                )}
-
-                {/* Change Email Error Message */}
-                {changeEmailError && (
-                  <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">
-                    {changeEmailError}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Change Email Confirmation Dialog */}
+        <Dialog
+          open={showChangeEmailConfirmDialog}
+          onOpenChange={setShowChangeEmailConfirmDialog}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Konfirmasi Perubahan Email</DialogTitle>
+              <DialogDescription>
+                Apakah Anda yakin ingin mengubah email ke{" "}
+                <strong>{newEmail}</strong>?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowChangeEmailConfirmDialog(false)}
+                disabled={isChangeEmailLoading}
+              >
+                Batal
+              </Button>
+              <Button
+                onClick={handleConfirmChangeEmail}
+                disabled={isChangeEmailLoading}
+              >
+                {isChangeEmailLoading ? "Memproses..." : "Ya, Ubah Email"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
-
-      {/* Edit Profile Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={handleEditDialogClose}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Profil</DialogTitle>
-            <DialogDescription>Ubah informasi profil Anda.</DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {/* Name Field */}
-            <div className="space-y-2">
-              <Label htmlFor="edit-name">Nama</Label>
-              <Input
-                id="edit-name"
-                type="text"
-                placeholder="Masukkan nama lengkap"
-                value={editFormData.name}
-                onChange={(e) => handleEditFormChange("name", e.target.value)}
-                className={editErrors.name ? "border-red-500" : ""}
-              />
-              {editErrors.name && (
-                <p className="text-red-500 text-sm">{editErrors.name}</p>
-              )}
-            </div>
-
-            {/* Phone Field */}
-            <div className="space-y-2">
-              <Label htmlFor="edit-phone">Nomor Telepon</Label>
-              <Input
-                id="edit-phone"
-                type="tel"
-                placeholder="Contoh: 081234567890"
-                value={editFormData.phone}
-                onChange={(e) => handleEditFormChange("phone", e.target.value)}
-                className={editErrors.phone ? "border-red-500" : ""}
-              />
-              {editErrors.phone && (
-                <p className="text-red-500 text-sm">{editErrors.phone}</p>
-              )}
-              <p className="text-gray-500 text-xs">
-                Format yang diterima: 0xxx, 62xxx, atau +62xxx
-              </p>
-            </div>
-
-            {/* Address Field */}
-            <div className="space-y-2">
-              <Label htmlFor="edit-address">Alamat</Label>
-              <Textarea
-                id="edit-address"
-                placeholder="Masukkan alamat lengkap"
-                value={editFormData.address}
-                onChange={(e) =>
-                  handleEditFormChange("address", e.target.value)
-                }
-                className={editErrors.address ? "border-red-500" : ""}
-                rows={3}
-              />
-              {editErrors.address && (
-                <p className="text-red-500 text-sm">{editErrors.address}</p>
-              )}
-            </div>
-
-            {/* Error Message */}
-            {profileUpdateError && (
-              <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">
-                {profileUpdateError}
-              </div>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={handleEditDialogClose}
-              disabled={isEditLoading}
-            >
-              Batal
-            </Button>
-            <Button onClick={handleEditSubmit} disabled={isEditLoading}>
-              {isEditLoading ? "Menyimpan..." : "Simpan"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Profile Confirmation Dialog */}
-      <Dialog
-        open={showEditConfirmDialog}
-        onOpenChange={setShowEditConfirmDialog}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Konfirmasi Perubahan</DialogTitle>
-            <DialogDescription>
-              Apakah Anda yakin ingin menyimpan perubahan profil ini?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowEditConfirmDialog(false)}
-              disabled={isEditLoading}
-            >
-              Batal
-            </Button>
-            <Button onClick={handleConfirmEditSubmit} disabled={isEditLoading}>
-              {isEditLoading ? "Menyimpan..." : "Ya, Simpan"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Reset Password Confirmation Dialog */}
-      <Dialog
-        open={showResetPasswordConfirmDialog}
-        onOpenChange={setShowResetPasswordConfirmDialog}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Konfirmasi Reset Password</DialogTitle>
-            <DialogDescription>
-              Apakah Anda yakin ingin mengirim link reset password ke email
-              Anda?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowResetPasswordConfirmDialog(false)}
-              disabled={isResetLoading}
-            >
-              Batal
-            </Button>
-            <Button
-              onClick={handleConfirmResetPassword}
-              disabled={isResetLoading}
-            >
-              {isResetLoading ? "Mengirim..." : "Ya, Kirim"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Change Email Dialog */}
-      <Dialog
-        open={showChangeEmailDialog}
-        onOpenChange={handleChangeEmailDialogClose}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Ubah Alamat Email</DialogTitle>
-            <DialogDescription>
-              Masukkan alamat email baru. Link konfirmasi akan dikirim ke email
-              baru Anda.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="current-email">Email Saat Ini</Label>
-              <Input
-                id="current-email"
-                type="email"
-                value={user?.email || ""}
-                disabled
-                className="bg-gray-50"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="new-email">Email Baru</Label>
-              <Input
-                id="new-email"
-                type="email"
-                placeholder="Masukkan email baru"
-                value={newEmail}
-                onChange={(e) => {
-                  setNewEmail(e.target.value);
-                  setChangeEmailError("");
-                }}
-                className={changeEmailError ? "border-red-500" : ""}
-              />
-            </div>
-
-            {changeEmailError && (
-              <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">
-                {changeEmailError}
-              </div>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={handleChangeEmailDialogClose}
-              disabled={isChangeEmailLoading}
-            >
-              Batal
-            </Button>
-            <Button
-              onClick={handleChangeEmailSubmit}
-              disabled={isChangeEmailLoading}
-            >
-              Lanjutkan
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Change Email Confirmation Dialog */}
-      <Dialog
-        open={showChangeEmailConfirmDialog}
-        onOpenChange={setShowChangeEmailConfirmDialog}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Konfirmasi Perubahan Email</DialogTitle>
-            <DialogDescription>
-              Apakah Anda yakin ingin mengubah email ke{" "}
-              <strong>{newEmail}</strong>?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowChangeEmailConfirmDialog(false)}
-              disabled={isChangeEmailLoading}
-            >
-              Batal
-            </Button>
-            <Button
-              onClick={handleConfirmChangeEmail}
-              disabled={isChangeEmailLoading}
-            >
-              {isChangeEmailLoading ? "Memproses..." : "Ya, Ubah Email"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Hapus Foto Profil</DialogTitle>
-            <DialogDescription>
-              Apakah Anda yakin ingin menghapus foto profil? Tindakan ini tidak
-              dapat dibatalkan.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowDeleteDialog(false)}
-              disabled={isDeleteLoading}
-            >
-              Batal
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteProfilePicture}
-              disabled={isDeleteLoading}
-            >
-              {isDeleteLoading ? "Menghapus..." : "Hapus"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <PasswordSetupModal
-        isOpen={showPasswordModal}
-        onClose={handlePasswordModalClose}
-      />
     </div>
+  );
+}
+
+export default function Profile() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex justify-center items-center h-screen">
+          <p>Loading...</p>
+        </div>
+      }
+    >
+      <ProfileContent />
+    </Suspense>
   );
 }

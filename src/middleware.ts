@@ -69,8 +69,19 @@ export async function middleware(request: NextRequest) {
 
         // Jika user adalah tenant
         if (userRole === "tenant") {
+          // Halaman yang boleh diakses tenant
+          const allowedTenantPaths = ["/tenant", "/profile"];
+          const isAllowedPath = allowedTenantPaths.some((path) =>
+            request.nextUrl.pathname.startsWith(path)
+          );
+
           // Jika tenant mengakses homepage, redirect ke /tenant
           if (request.nextUrl.pathname === "/") {
+            return NextResponse.redirect(new URL("/tenant", request.url));
+          }
+
+          // Jika tenant mengakses halaman yang tidak diizinkan, redirect ke /tenant
+          if (!isAllowedPath) {
             return NextResponse.redirect(new URL("/tenant", request.url));
           }
         }

@@ -1,268 +1,108 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import {
-  Building2,
-  Filter,
-  Plus,
-  Trash2,
-  Loader2,
-  MoreHorizontal,
-} from "lucide-react";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { useAvailability } from "@/hooks/useAvailability";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableRow,
-  TableCell,
-} from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
-import { Calendar } from "@/components/ui/calendar";
+import { Loader2, Plus, Building2 } from "lucide-react";
 import { DateRange } from "react-day-picker";
 
-interface Property {
-  id: number;
-  name: string;
-}
+import PageHeader from "@/components/tenant/PageHeader";
+import { PropertyRoomFilter } from "@/components/tenant/PropertyRoomFilter";
+import { AvailabilityCalendar } from "@/components/tenant/availability/AvailabilityCalendar";
+import { UnavailabilityTable } from "@/components/tenant/availability/UnavailabilityTable";
+import { AddUnavailabilityDialog } from "@/components/tenant/availability/AddUnavailabilityDialog";
+import { ConfirmActionDialog } from "@/components/tenant/availability/ConfirmActionDialog";
+import { ErrorDialog } from "@/components/tenant/availability/ErrorDialog";
 
-interface Room {
-  id: number;
-  name: string;
-}
-
-interface Unavailability {
-  id: number;
-  room_id: number;
-  start_date: string; // ISO date
-  end_date: string; // ISO date
-}
+import type { Unavailability } from "@/lib/types/tenant";
 
 export default function AvailabilityPage() {
   const { session, loading: authLoading } = useAuth();
+  const {
+    properties,
+    rooms,
+    unavailabilities,
+    selectedProperty,
+    setSelectedProperty,
+    selectedRoom,
+    setSelectedRoom,
+    month,
+    setMonth,
+    loading,
+    error,
+    setError,
+    fetchUnavailabilities,
+    fetcher,
+  } = useAvailability();
 
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [rooms, setRooms] = useState<Room[]>([]);
-
-  const [selectedProperty, setSelectedProperty] = useState<string>("");
-  const [selectedRoom, setSelectedRoom] = useState<string>("");
-
-  const [month, setMonth] = useState<Date>(() => {
-    const d = new Date();
-    d.setDate(1);
-    return d;
+  const [dialogs, setDialogs] = useState({
+    add: false,
+    confirmDelete: false,
   });
-
-  const [unavailabilities, setUnavailabilities] = useState<Unavailability[]>(
-    []
-  );
-  const [loadingData, setLoadingData] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  // Dialog states for Add & Delete
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [range, setRange] = useState<DateRange | undefined>();
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Unavailability | null>(null);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [pendingRange, setPendingRange] = useState<DateRange | undefined>();
-
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
-  // Fetch properties on mount
-  useEffect(() => {
-    if (!session?.access_token) return;
+  const handleAddUnavailability = async (range: DateRange) => {
+    if (!range.from || !selectedRoom) return;
 
-    const fetchProperties = async () => {
-      try {
-        const res = await fetch(`${apiUrl}/tenant/properties?all=true`, {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        });
-        if (!res.ok) throw new Error("Gagal mengambil daftar properti");
-        const json = await res.json();
-        setProperties(json.data);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    fetchProperties();
-  }, [session, apiUrl]);
+    const formatForApi = (d: Date) => d.toISOString().split("T")[0];
 
-  // Fetch rooms when property selected
-  useEffect(() => {
-    if (!session?.access_token || !selectedProperty) return;
-
-    const fetchRooms = async () => {
-      try {
-        const res = await fetch(
-          `${apiUrl}/tenant/rooms?property_id=${selectedProperty}&all=true`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${session.access_token}`,
-            },
-          }
-        );
-        if (!res.ok) throw new Error("Gagal mengambil daftar room");
-        const json = await res.json();
-        setRooms(json.data);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    fetchRooms();
-  }, [session, selectedProperty, apiUrl]);
-
-  const getMonthString = (d: Date) => {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    return `${y}-${m}`;
-  };
-
-  const fetchUnavailabilities = useCallback(async () => {
-    if (!session?.access_token || !selectedRoom) return;
-
+    setSubmitting(true);
     try {
-      setLoadingData(true);
-      setError(null);
-      const monthStr = getMonthString(month);
-      const res = await fetch(
-        `${apiUrl}/tenant/unavailabilities/list?room_id=${selectedRoom}&month=${monthStr}`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        }
-      );
-      if (!res.ok) throw new Error("Gagal mengambil data unavailability");
-      const json = await res.json();
-      setUnavailabilities(json.data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
-    } finally {
-      setLoadingData(false);
-    }
-  }, [session, selectedRoom, month, apiUrl]);
-
-  // Fetch when month or room changes
-  useEffect(() => {
-    fetchUnavailabilities();
-  }, [fetchUnavailabilities]);
-
-  // Calculate unavailable dates for calendar modifiers
-  const unavailableDates: Date[] = (() => {
-    const dates: Date[] = [];
-    const stripTime = (d: Date) => {
-      const _d = new Date(d);
-      _d.setHours(0, 0, 0, 0);
-      return _d;
-    };
-    unavailabilities.forEach((u) => {
-      const start = stripTime(new Date(u.start_date));
-      const end = stripTime(new Date(u.end_date));
-      let d = new Date(start);
-      while (d <= end) {
-        dates.push(new Date(d));
-        d.setDate(d.getDate() + 1);
-      }
-    });
-    return dates;
-  })();
-
-  const submitUnavailability = async (submittedRange: DateRange) => {
-    if (!session?.access_token || !submittedRange.from || !selectedRoom) return;
-
-    const formatForApi = (d: Date) => {
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
-      const dd = String(d.getDate()).padStart(2, "0");
-      return `${yyyy}-${mm}-${dd}`;
-    };
-
-    try {
-      setSubmitting(true);
-      const body = {
-        room_id: selectedRoom,
-        start_date: formatForApi(submittedRange.from),
-        end_date: formatForApi(submittedRange.to ?? submittedRange.from),
-      };
-      const res = await fetch(`${apiUrl}/tenant/unavailabilities`, {
+      const response = await fetch(`${apiUrl}/tenant/unavailabilities`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${session?.access_token}`,
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          room_id: selectedRoom,
+          start_date: formatForApi(range.from),
+          end_date: formatForApi(range.to ?? range.from),
+        }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.message || "Gagal menambah data");
-      setShowConfirmDialog(false);
-      setPendingRange(undefined);
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ message: "Gagal memproses error response" }));
+        throw new Error(errorData.message || "Gagal menambahkan data.");
+      }
       await fetchUnavailabilities();
+      setDialogs((prev) => ({ ...prev, add: false }));
     } catch (err) {
-      setShowConfirmDialog(false);
-      setShowAddDialog(false);
-      setErrorMessage(err instanceof Error ? err.message : "Terjadi kesalahan");
+      setError(err instanceof Error ? err.message : "Gagal menambahkan data.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const openConfirm = () => {
-    if (!range?.from) return;
-    setPendingRange(range);
-    setShowAddDialog(false);
-    setShowConfirmDialog(true);
-  };
-
   const handleDelete = async () => {
-    if (!session?.access_token || !deleteTarget) return;
+    if (!deleteTarget) return;
+
+    setSubmitting(true);
     try {
-      setSubmitting(true);
-      const res = await fetch(
+      const response = await fetch(
         `${apiUrl}/tenant/unavailabilities/${deleteTarget.id}`,
         {
           method: "DELETE",
           headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
+            Authorization: `Bearer ${session?.access_token}`,
           },
         }
       );
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.message || "Gagal menghapus data");
-      setDeleteTarget(null);
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ message: "Gagal memproses error response" }));
+        throw new Error(errorData.message || "Gagal menghapus data.");
+      }
       await fetchUnavailabilities();
-    } catch (err) {
       setDeleteTarget(null);
-      setErrorMessage(err instanceof Error ? err.message : "Terjadi kesalahan");
+      setDialogs((prev) => ({ ...prev, confirmDelete: false }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal menghapus data.");
     } finally {
       setSubmitting(false);
     }
@@ -278,12 +118,12 @@ export default function AvailabilityPage() {
 
   if (!session) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
+      <div className="flex items-center justify-center h-64 text-center">
+        <div>
           <Building2 className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
-          <h3 className="text-lg font-medium mb-2">Session Tidak Ditemukan</h3>
-          <p className="text-muted-foreground mb-4">
-            Silakan login kembali untuk mengakses halaman ini
+          <h3 className="text-lg font-medium mb-2">Sesi Tidak Ditemukan</h3>
+          <p className="text-muted-foreground">
+            Silakan login untuk mengakses halaman ini.
           </p>
         </div>
       </div>
@@ -292,337 +132,87 @@ export default function AvailabilityPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="mr-2 sm:mr-10">
-          <h1 className="text-2xl font-bold">Ketersediaan Room</h1>
-          <p className="text-muted-foreground">
-            Tambahkan pengaturan unavailability untuk menjadikan kamar tidak
-            bisa dipesan pada tanggal-tanggal tertentu
-          </p>
-        </div>
-        <Button onClick={() => setShowAddDialog(true)} disabled={!selectedRoom}>
+        <PageHeader
+          title="Ketersediaan Room"
+          description="Atur tanggal-tanggal saat room tidak tersedia untuk dipesan."
+          backHref="/tenant"
+        />
+
+        <Button
+          onClick={() => setDialogs((prev) => ({ ...prev, add: true }))}
+          disabled={!selectedRoom}
+        >
           <Plus className="mr-2 h-4 w-4" /> Tambah Unavailability
         </Button>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-        {/* Property filter */}
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-muted-foreground" />
-          <label className="text-sm font-medium text-muted-foreground">
-            Properti:
-          </label>
+      <PropertyRoomFilter
+        properties={properties}
+        rooms={rooms}
+        selectedProperty={selectedProperty}
+        selectedRoom={selectedRoom}
+        onPropertyChange={setSelectedProperty}
+        onRoomChange={setSelectedRoom}
+        isLoadingRooms={loading.rooms}
+      />
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-1">
+          <AvailabilityCalendar
+            unavailabilities={unavailabilities}
+            month={month}
+            onMonthChange={setMonth}
+            isLoading={loading.unavailabilities}
+            isRoomSelected={!!selectedRoom}
+          />
         </div>
-        <Select
-          value={selectedProperty}
-          onValueChange={(v) => {
-            setSelectedProperty(v);
-            setSelectedRoom("");
-            setUnavailabilities([]);
-          }}
-        >
-          <SelectTrigger className="w-64">
-            <SelectValue placeholder="Pilih Properti" />
-          </SelectTrigger>
-          <SelectContent>
-            {properties.map((p) => (
-              <SelectItem key={p.id} value={p.id.toString()}>
-                {p.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Room filter */}
-        {selectedProperty && (
-          <>
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <label className="text-sm font-medium text-muted-foreground">
-                Room:
-              </label>
-            </div>
-            <Select
-              value={selectedRoom}
-              onValueChange={(v) => setSelectedRoom(v)}
-            >
-              <SelectTrigger className="w-64">
-                <SelectValue placeholder="Pilih Room" />
-              </SelectTrigger>
-              <SelectContent>
-                {rooms.map((r) => (
-                  <SelectItem key={r.id} value={r.id.toString()}>
-                    {r.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </>
-        )}
-      </div>
-
-      {/* Kalender & Tabel (berdampingan pada layar lg ke atas) */}
-      <div className="flex flex-col lg:flex-row lg:gap-8">
-        {/* Bagian Kalender */}
-        <div className="lg:w-1/3">
-          {loadingData ? (
-            <div className="flex justify-center py-16">
-              <Loader2 className="animate-spin" />
-            </div>
-          ) : selectedRoom ? (
-            <Calendar
-              className="mx-auto"
+        {selectedRoom && (
+          <div className="lg:col-span-2">
+            <UnavailabilityTable
+              unavailabilities={unavailabilities}
+              onDelete={(item) => {
+                setDeleteTarget(item);
+                setDialogs((prev) => ({ ...prev, confirmDelete: true }));
+              }}
               month={month}
-              onMonthChange={(m) => setMonth(m)}
-              numberOfMonths={1}
-              showOutsideDays
-              modifiers={{ unavailable: unavailableDates }}
-              modifiersClassNames={{ unavailable: "bg-red-400 text-white" }}
-              captionLayout="dropdown"
             />
-          ) : (
-            <div className="text-center text-muted-foreground py-8">
-              Silakan pilih properti dan room terlebih dahulu
-            </div>
-          )}
-        </div>
-
-        {/* Bagian Tabel */}
-        {selectedRoom && !loadingData && (
-          <div className="lg:w-2/3 overflow-x-auto mt-6 lg:mt-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>No</TableHead>
-                  <TableHead>Tidak Tersedia Mulai</TableHead>
-                  <TableHead>Sampai</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {unavailabilities.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={4}
-                      className="text-center text-muted-foreground py-6"
-                    >
-                      Tidak ada pengaturan unavailability untuk bulan{" "}
-                      {month.toLocaleDateString("id-ID", {
-                        month: "long",
-                        year: "numeric",
-                      })}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  unavailabilities.map((u, idx) => (
-                    <TableRow key={u.id}>
-                      <TableCell>{idx + 1}</TableCell>
-                      <TableCell>
-                        {new Date(u.start_date).toLocaleDateString("id-ID", {
-                          day: "numeric",
-                          month: "long",
-                          year: "numeric",
-                        })}
-                      </TableCell>
-                      <TableCell>
-                        {new Date(u.end_date).toLocaleDateString("id-ID", {
-                          day: "numeric",
-                          month: "long",
-                          year: "numeric",
-                        })}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => setDeleteTarget(u)}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" /> Hapus
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
           </div>
         )}
       </div>
 
-      {/* Add Dialog */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="w-[340px] sm:w-[420px] md:w-[480px]">
-          <DialogHeader>
-            <DialogTitle>Tambah Unavailability</DialogTitle>
-            <DialogDescription>
-              Pilih rentang tanggal yang ingin ditandai sebagai "tidak tersedia"
-            </DialogDescription>
-          </DialogHeader>
-          <Calendar
-            mode="range"
-            numberOfMonths={1}
-            selected={range}
-            onSelect={setRange}
-            captionLayout="dropdown"
-            className="mx-auto w-3/4"
-          />
-          {/* Summary */}
-          {range?.from &&
-            (() => {
-              const name =
-                rooms.find((r) => r.id.toString() === selectedRoom)?.name || "";
-              const startStr = range.from.toLocaleDateString("id-ID", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              });
-              const endStr = (range.to ?? range.from).toLocaleDateString(
-                "id-ID",
-                {
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                }
-              );
-              const sameDay =
-                range.to == null ||
-                range.from.toDateString() === range.to.toDateString();
-              return (
-                <p className="text-sm text-center my-2">
-                  Kamar {name} akan tidak tersedia{" "}
-                  {sameDay ? "pada tanggal" : "mulai tanggal"} {startStr}
-                  {!sameDay && <> sampai {endStr}</>}
-                </p>
-              );
-            })()}
+      <AddUnavailabilityDialog
+        open={dialogs.add}
+        onOpenChange={(open) => setDialogs((prev) => ({ ...prev, add: open }))}
+        onSubmit={handleAddUnavailability}
+        isSubmitting={submitting}
+        selectedRoomId={selectedRoom}
+        rooms={rooms}
+      />
 
-          <Button onClick={openConfirm} disabled={submitting || !range?.from}>
-            {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Simpan
-          </Button>
-        </DialogContent>
-      </Dialog>
+      {deleteTarget && (
+        <ConfirmActionDialog
+          open={dialogs.confirmDelete}
+          onOpenChange={(open) => {
+            if (!open) setDeleteTarget(null);
+            setDialogs((prev) => ({ ...prev, confirmDelete: open }));
+          }}
+          onConfirm={handleDelete}
+          isSubmitting={submitting}
+          title="Hapus Unavailability"
+          description={`Anda yakin ingin menghapus jadwal ini?`}
+          variant="destructive"
+          confirmText="Ya, Hapus"
+        />
+      )}
 
-      {/* Confirm Dialog */}
-      <Dialog
-        open={showConfirmDialog}
-        onOpenChange={(open) => {
-          if (!open) {
-            setShowConfirmDialog(false);
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Konfirmasi Unavailability</DialogTitle>
-            <DialogDescription>
-              Apakah Anda yakin ingin menandai kamar{" "}
-              {rooms.find((r) => r.id.toString() === selectedRoom)?.name || ""}{" "}
-              tidak tersedia pada tanggal berikut?
-            </DialogDescription>
-          </DialogHeader>
-          {pendingRange?.from &&
-            (() => {
-              const startStr = pendingRange.from.toLocaleDateString("id-ID", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              });
-              const endStr = (
-                pendingRange.to ?? pendingRange.from
-              ).toLocaleDateString("id-ID", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              });
-              const sameDay =
-                pendingRange.to == null ||
-                pendingRange.from.toDateString() ===
-                  pendingRange.to.toDateString();
-              return (
-                <p className="text-center text-gray-900">
-                  {sameDay ? startStr : `${startStr} - ${endStr}`}
-                </p>
-              );
-            })()}
-          <DialogFooter>
-            <Button
-              variant="secondary"
-              onClick={() => setShowConfirmDialog(false)}
-              disabled={submitting}
-            >
-              Batal
-            </Button>
-            <Button
-              onClick={() => pendingRange && submitUnavailability(pendingRange)}
-              disabled={submitting}
-            >
-              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Konfirmasi
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Dialog */}
-      <Dialog
-        open={!!deleteTarget}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Hapus Unavailability</DialogTitle>
-            <DialogDescription>
-              Apakah Anda yakin ingin menghapus tanggal tidak tersedia ini?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="secondary"
-              onClick={() => setDeleteTarget(null)}
-              disabled={submitting}
-            >
-              Batal
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={submitting}
-            >
-              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Hapus
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Error Dialog */}
-      <Dialog
-        open={!!errorMessage}
-        onOpenChange={(open) => {
-          if (!open) setErrorMessage(null);
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Terjadi Kesalahan</DialogTitle>
-          </DialogHeader>
-          <p className="text-center py-4">{errorMessage}</p>
-          <DialogFooter>
-            <Button onClick={() => setErrorMessage(null)}>Tutup</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {error && (
+        <ErrorDialog
+          open={!!error}
+          onOpenChange={() => setError(null)}
+          message={error}
+        />
+      )}
     </div>
   );
 }
