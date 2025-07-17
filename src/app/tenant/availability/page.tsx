@@ -98,7 +98,7 @@ export default function AvailabilityPage() {
 
     const fetchProperties = async () => {
       try {
-        const res = await fetch(`${apiUrl}/properties/my-properties?all=true`, {
+        const res = await fetch(`${apiUrl}/tenant/properties?all=true`, {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
@@ -121,7 +121,7 @@ export default function AvailabilityPage() {
     const fetchRooms = async () => {
       try {
         const res = await fetch(
-          `${apiUrl}/properties/rooms/my-rooms?property_id=${selectedProperty}&all=true`,
+          `${apiUrl}/tenant/rooms?property_id=${selectedProperty}&all=true`,
           {
             headers: {
               "Content-Type": "application/json",
@@ -153,7 +153,7 @@ export default function AvailabilityPage() {
       setError(null);
       const monthStr = getMonthString(month);
       const res = await fetch(
-        `${apiUrl}/properties/rooms/unavailabilities?room_id=${selectedRoom}&month=${monthStr}`,
+        `${apiUrl}/tenant/unavailabilities/list?room_id=${selectedRoom}&month=${monthStr}`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -213,7 +213,7 @@ export default function AvailabilityPage() {
         start_date: formatForApi(submittedRange.from),
         end_date: formatForApi(submittedRange.to ?? submittedRange.from),
       };
-      const res = await fetch(`${apiUrl}/properties/rooms/unavailabilities`, {
+      const res = await fetch(`${apiUrl}/tenant/unavailabilities`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -247,7 +247,7 @@ export default function AvailabilityPage() {
     try {
       setSubmitting(true);
       const res = await fetch(
-        `${apiUrl}/properties/rooms/unavailabilities/${deleteTarget.id}`,
+        `${apiUrl}/tenant/unavailabilities/${deleteTarget.id}`,
         {
           method: "DELETE",
           headers: {

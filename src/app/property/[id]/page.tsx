@@ -65,9 +65,9 @@ const PropertyDetailPage = () => {
         const checkOutOriginal = currentSearchParams.check_out;
         const guests = currentSearchParams.guests;
 
-        // Sesuaikan tanggal (-1 hari) untuk menutupi kesalahan input DB
-        const checkIn = shiftDate(checkInOriginal, -1);
-        const checkOut = shiftDate(checkOutOriginal, -1);
+        // Gunakan tanggal asli tanpa penyesuaian karena issue DB sudah diperbaiki
+        const checkIn = checkInOriginal;
+        const checkOut = checkOutOriginal;
 
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/properties/detail?property_id=${propertyId}&check_in=${checkIn}&check_out=${checkOut}&guests=${guests}`

@@ -144,7 +144,7 @@ export default function RoomGalleryPage() {
       setLoadingProperties(true);
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/properties/my-properties?all=true`,
+        `${process.env.NEXT_PUBLIC_API_URL}/tenant/properties?all=true`,
         {
           headers: {
             "Content-Type": "application/json",

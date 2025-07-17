@@ -133,7 +133,7 @@ export default function RoomsPage() {
       setLoadingProperties(true);
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/properties/my-properties?all=true`,
+        `${process.env.NEXT_PUBLIC_API_URL}/tenant/properties?all=true`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -166,7 +166,7 @@ export default function RoomsPage() {
       setLoading(true);
 
       // Build URL with optional property_id filter
-      let url = `${process.env.NEXT_PUBLIC_API_URL}/properties/rooms/my-rooms?page=${page}`;
+      let url = `${process.env.NEXT_PUBLIC_API_URL}/tenant/rooms?page=${page}`;
       if (selectedProperty !== "all") {
         url += `&property_id=${selectedProperty}`;
       }
@@ -187,9 +187,38 @@ export default function RoomsPage() {
         throw new Error(`Gagal mengambil data room: ${response.status}`);
       }
 
-      const data: RoomResponse = await response.json();
-      setRooms(data.data);
-      setPagination(data.pagination);
+      const data = await response.json();
+
+      const transformedRooms: Room[] = (data.data || []).map((r: any) => ({
+        id: r.id,
+        name: r.name,
+        price: r.price,
+        max_guests: r.max_guests,
+        quantity: r.quantity,
+        property_id: r.property_id,
+        property_name: r.properties?.name || "-",
+        created_at: r.created_at,
+        updated_at: r.updated_at,
+      }));
+
+      setRooms(transformedRooms);
+
+      const apiPagination = data.pagination || {};
+      const itemsPerPage = transformedRooms.length;
+      const currentPage = apiPagination.current_page || 1;
+      const totalPages = apiPagination.total_pages || 1;
+      const totalItems = apiPagination.total_items || itemsPerPage;
+
+      const newPagination: PaginationInfo = {
+        current_page: currentPage,
+        total_pages: totalPages,
+        total_items: totalItems,
+        items_per_page: itemsPerPage,
+        has_next_page: currentPage < totalPages,
+        has_previous_page: currentPage > 1,
+      };
+
+      setPagination(newPagination);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Terjadi kesalahan");
@@ -225,7 +254,7 @@ export default function RoomsPage() {
     try {
       setSubmitting(true);
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/properties/rooms/delete/${deletingRoom.id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/tenant/rooms/${deletingRoom.id}`,
         {
           method: "DELETE",
           headers: {

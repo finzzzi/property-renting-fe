@@ -85,7 +85,7 @@ export default function EditRoomPage() {
       setLoading(true);
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/properties/rooms/update/${roomId}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/tenant/rooms/${roomId}/edit`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -205,7 +205,7 @@ export default function EditRoomPage() {
       };
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/properties/rooms/update/${roomId}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/tenant/rooms/${roomId}`,
         {
           method: "PUT",
           headers: {

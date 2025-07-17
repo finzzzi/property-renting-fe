@@ -22,6 +22,10 @@ interface Room {
   available_quantity: number;
   final_price: number;
   room_pictures: RoomPicture[];
+  peak_season_rates: {
+    start_date: string;
+    end_date: string;
+  }[];
 }
 
 interface RoomListProps {
@@ -56,6 +60,11 @@ const RoomList: React.FC<RoomListProps> = ({
       </div>
     );
   }
+
+  // Parse check-in date from URL search params once for all rooms
+  const checkInDate = searchParams.check_in
+    ? new Date(searchParams.check_in)
+    : null;
 
   return (
     <div className="space-y-6">
@@ -125,7 +134,29 @@ const RoomList: React.FC<RoomListProps> = ({
                   <div className="md:text-right md:ml-6">
                     <div className="mb-4">
                       <div className="text-2xl font-bold text-orange-600">
-                        {formatCurrency(room.final_price)}
+                        {/* Tentukan harga yang ditampilkan: gunakan final_price hanya jika check-in berada di rentang peak season */}
+                        {(() => {
+                          let displayPrice = room.price;
+
+                          if (checkInDate && room.peak_season_rates) {
+                            const isPeak = room.peak_season_rates.some(
+                              (rate) => {
+                                const start = new Date(rate.start_date);
+                                const end = new Date(rate.end_date);
+                                return (
+                                  checkInDate.getTime() >= start.getTime() &&
+                                  checkInDate.getTime() <= end.getTime()
+                                );
+                              }
+                            );
+
+                            if (isPeak) {
+                              displayPrice = room.final_price;
+                            }
+                          }
+
+                          return formatCurrency(displayPrice);
+                        })()}
                       </div>
                       <div className="text-sm text-gray-500">per malam</div>
                     </div>

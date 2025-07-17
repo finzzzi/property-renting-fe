@@ -190,7 +190,7 @@ export default function AddPropertyPage() {
       try {
         setCategoriesLoading(true);
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/properties/categories?tenant_id=${session.user.id}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/tenant/categories?tenant_id=${session.user.id}`,
           {
             headers: {
               "Content-Type": "application/json",
@@ -290,7 +290,7 @@ export default function AddPropertyPage() {
       setError(null);
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/properties/create`,
+        `${process.env.NEXT_PUBLIC_API_URL}/tenant/properties`,
         {
           method: "POST",
           headers: {

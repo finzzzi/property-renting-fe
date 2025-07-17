@@ -102,7 +102,7 @@ export default function PeakSeasonsPage() {
     if (!session?.access_token) return;
     const fetchProps = async () => {
       try {
-        const res = await fetch(`${apiUrl}/properties/my-properties?all=true`, {
+        const res = await fetch(`${apiUrl}/tenant/properties?all=true`, {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
@@ -123,7 +123,7 @@ export default function PeakSeasonsPage() {
     const fetchRooms = async () => {
       try {
         const res = await fetch(
-          `${apiUrl}/properties/rooms/my-rooms?property_id=${selectedProperty}&all=true`,
+          `${apiUrl}/tenant/rooms?property_id=${selectedProperty}&all=true`,
           {
             headers: {
               "Content-Type": "application/json",
@@ -148,7 +148,7 @@ export default function PeakSeasonsPage() {
     try {
       setLoadingData(true);
       const res = await fetch(
-        `${apiUrl}/properties/rooms/peak-season?room_id=${selectedRoom}&month=${monthStr(
+        `${apiUrl}/tenant/peak-seasons?room_id=${selectedRoom}&month=${monthStr(
           month
         )}`,
         {
@@ -267,8 +267,8 @@ export default function PeakSeasonsPage() {
       end_date: formatForApi(pendingForm.range.to ?? pendingForm.range.from),
     };
     const url = editingSeason
-      ? `${apiUrl}/properties/rooms/peak-season/${editingSeason.id}`
-      : `${apiUrl}/properties/rooms/peak-season`;
+      ? `${apiUrl}/tenant/peak-seasons/${editingSeason.id}`
+      : `${apiUrl}/tenant/peak-seasons`;
     const method = editingSeason ? "PUT" : "POST";
     try {
       setSubmitting(true);
@@ -299,7 +299,7 @@ export default function PeakSeasonsPage() {
     try {
       setSubmitting(true);
       const res = await fetch(
-        `${apiUrl}/properties/rooms/peak-season/${deleteTarget.id}`,
+        `${apiUrl}/tenant/peak-seasons/${deleteTarget.id}`,
         {
           method: "DELETE",
           headers: {

@@ -27,7 +27,7 @@ export const usePropertySearch = (initialSearchParams: SearchParams) => {
     CategoryWithCount[]
   >([]);
 
-  // All categories fetched from /properties/categories
+  // All categories fetched from /tenant/categories
   const [allCategories, setAllCategories] = useState<string[]>([]);
 
   // Store last calculated counts so we can recompute availableCategories when allCategories arrives
@@ -254,7 +254,7 @@ export const usePropertySearch = (initialSearchParams: SearchParams) => {
         // Fetch all categories (static list)
         try {
           const res = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/properties/categories`
+            `${process.env.NEXT_PUBLIC_API_URL}/tenant/categories`
           );
           if (res.ok) {
             const cats = await res.json();

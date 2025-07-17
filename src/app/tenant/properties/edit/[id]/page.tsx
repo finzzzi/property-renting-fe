@@ -69,11 +69,11 @@ interface Property {
   location: string;
   category_id: number;
   city_id: number;
-  category: {
+  category?: {
     id: number;
     name: string;
   };
-  city: {
+  city?: {
     id: number;
     name: string;
     type: string;
@@ -126,7 +126,7 @@ export default function EditPropertyPage() {
       try {
         setPropertyLoading(true);
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/properties/update/${propertyId}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/tenant/properties/${propertyId}/edit`,
           {
             headers: {
               "Content-Type": "application/json",
@@ -150,13 +150,6 @@ export default function EditPropertyPage() {
           category_id: property.category_id.toString(),
           city_id: property.city_id.toString(),
         });
-
-        // Set selected city
-        setSelectedCity({
-          id: property.city.id,
-          name: property.city.name,
-          type: property.city.type,
-        });
       } catch (err) {
         console.error("Error fetching property:", err);
         setError("Gagal mengambil data properti");
@@ -170,6 +163,17 @@ export default function EditPropertyPage() {
     }
   }, [session, propertyId]);
 
+  useEffect(() => {
+    if (cities.length > 0 && formData.city_id) {
+      const matchedCity = cities.find(
+        (c) => c.id === parseInt(formData.city_id)
+      );
+      if (matchedCity) {
+        setSelectedCity(matchedCity);
+      }
+    }
+  }, [cities, formData.city_id]);
+
   // Fetch categories
   useEffect(() => {
     const fetchCategories = async () => {
@@ -178,7 +182,7 @@ export default function EditPropertyPage() {
       try {
         setCategoriesLoading(true);
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/properties/categories?tenant_id=${session.user.id}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/tenant/categories?tenant_id=${session.user.id}`,
           {
             headers: {
               "Content-Type": "application/json",
@@ -278,7 +282,7 @@ export default function EditPropertyPage() {
       setError(null);
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/properties/update/${propertyId}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/tenant/properties/${propertyId}`,
         {
           method: "PUT",
           headers: {

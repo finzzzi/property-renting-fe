@@ -106,7 +106,7 @@ export default function PropertiesPage() {
       setLoading(true);
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/properties/my-properties?page=${page}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/tenant/properties?page=${page}`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -124,9 +124,48 @@ export default function PropertiesPage() {
         throw new Error(`Gagal mengambil data properti: ${response.status}`);
       }
 
-      const data: PropertyResponse = await response.json();
-      setProperties(data.data);
-      setPagination(data.pagination);
+      const data = await response.json();
+
+      const transformedProperties: Property[] = (data.data || []).map(
+        (p: any) => ({
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          location: p.location,
+          created_at: p.created_at,
+          updated_at: p.updated_at,
+          total_rooms: Array.isArray(p.rooms) ? p.rooms.length : 0,
+          category: {
+            id: p.category_id,
+            name: p.property_categories?.name || "-",
+          },
+          city: {
+            id: p.city_id,
+            name: p.cities?.name || "-",
+            type: p.cities?.type || "",
+          },
+        })
+      );
+
+      setProperties(transformedProperties);
+
+      const apiPagination = data.pagination || {};
+
+      const itemsPerPage = transformedProperties.length;
+      const currentPage = apiPagination.current_page || 1;
+      const totalPages = apiPagination.total_pages || 1;
+      const totalItems = apiPagination.total_items || itemsPerPage;
+
+      const newPagination: PaginationInfo = {
+        current_page: currentPage,
+        total_pages: totalPages,
+        total_items: totalItems,
+        items_per_page: itemsPerPage,
+        has_next_page: currentPage < totalPages,
+        has_previous_page: currentPage > 1,
+      };
+
+      setPagination(newPagination);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Terjadi kesalahan");
@@ -149,7 +188,7 @@ export default function PropertiesPage() {
     try {
       setSubmitting(true);
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/properties/delete/${deletingProperty.id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/tenant/properties/${deletingProperty.id}`,
         {
           method: "DELETE",
           headers: {

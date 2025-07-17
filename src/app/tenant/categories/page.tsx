@@ -79,7 +79,7 @@ export default function CategoriesPage() {
       try {
         setLoading(true);
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/properties/categories?tenant_id=${session.user.id}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/tenant/categories?tenant_id=${session.user.id}`,
           {
             headers: {
               "Content-Type": "application/json",
@@ -117,7 +117,7 @@ export default function CategoriesPage() {
     try {
       setSubmitting(true);
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/properties/categories/create`,
+        `${process.env.NEXT_PUBLIC_API_URL}/tenant/categories`,
         {
           method: "POST",
           headers: {
@@ -138,7 +138,7 @@ export default function CategoriesPage() {
 
       // Refresh categories list
       const updatedResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/properties/categories?tenant_id=${session.user.id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/tenant/categories?tenant_id=${session.user.id}`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -171,7 +171,7 @@ export default function CategoriesPage() {
     try {
       setSubmitting(true);
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/properties/categories/update/${editingCategory.id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/tenant/categories/${editingCategory.id}`,
         {
           method: "PUT",
           headers: {
@@ -191,7 +191,7 @@ export default function CategoriesPage() {
 
       // Refresh categories list
       const updatedResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/properties/categories?tenant_id=${session.user.id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/tenant/categories?tenant_id=${session.user.id}`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -224,7 +224,7 @@ export default function CategoriesPage() {
     try {
       setSubmitting(true);
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/properties/categories/delete/${deletingCategory.id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/tenant/categories/${deletingCategory.id}`,
         {
           method: "DELETE",
           headers: {
@@ -241,7 +241,7 @@ export default function CategoriesPage() {
 
       // Refresh categories list
       const updatedResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/properties/categories?tenant_id=${session.user.id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/tenant/categories?tenant_id=${session.user.id}`,
         {
           headers: {
             "Content-Type": "application/json",

@@ -117,7 +117,7 @@ export default function AddRoomPage() {
       setLoading(true);
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/properties/my-properties?all=true`,
+        `${process.env.NEXT_PUBLIC_API_URL}/tenant/properties?all=true`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -230,7 +230,7 @@ export default function AddRoomPage() {
       };
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/properties/rooms/create`,
+        `${process.env.NEXT_PUBLIC_API_URL}/tenant/rooms`,
         {
           method: "POST",
           headers: {
